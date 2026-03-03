@@ -1,3 +1,0 @@
-# HireX – Application for Searching Contractors and Workers in Cities
-
-HireX is a web-based application that helps users find contractors and skilled workers in different cities quickly and easily. The platform allows users to search for professionals based on location and service type, view their profiles, and contact them directly. Contractors and workers can register, post their service details, and manage customer requests through the system. An admin module ensures that only verified service providers are listed on the platform. HireX aims to simplify the process of hiring skilled professionals and provide a reliable, user-friendly solution for urban service discovery.
