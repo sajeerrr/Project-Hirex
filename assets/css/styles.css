@@ -238,6 +238,7 @@ transition: background 0.3s ease,
                 border-color 0.3s ease,
                 transform 0.2s ease,
                 box-shadow 0.2s ease;
+box-shadow:0 10px 30px rgba(0,0,0,0.1);
 }
 
 
@@ -498,6 +499,113 @@ font-size:14px;
 }
 
 .register-login a{
+
+color:var(--olive);
+text-decoration:none;
+font-weight:600;
+
+}
+
+
+
+
+
+
+
+
+
+
+/* WORKER REGISTER PAGE */
+
+.worker-register-section{
+
+min-height:calc(100vh - 70px);
+display:flex;
+align-items:center;
+justify-content:center;
+background:
+linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)),
+url("../images/bg.png");
+background-size:cover;
+background-position:center;
+
+}
+
+.worker-register-container{
+
+width:450px;
+max-width:90%;
+background:white;
+padding:40px;
+border-radius:12px;
+box-shadow:0 15px 40px rgba(0,0,0,0.1);
+text-align:center;
+
+}
+
+.worker-register-title{
+
+font-family:'Playfair Display',serif;
+font-size:30px;
+margin-bottom:8px;
+
+}
+
+.worker-register-sub{
+
+color:var(--muted);
+margin-bottom:25px;
+
+}
+
+.worker-register-form input,
+.worker-register-form select{
+
+width:100%;
+padding:12px;
+margin-bottom:15px;
+border:1px solid var(--border);
+border-radius:8px;
+font-size:14px;
+
+}
+
+.worker-register-form input:focus,
+.worker-register-form select:focus{
+
+outline:none;
+border-color:var(--olive);
+
+}
+
+.worker-register-btn{
+
+width:100%;
+padding:12px;
+background:var(--olive);
+color:white;
+border:none;
+border-radius:8px;
+font-size:15px;
+cursor:pointer;
+transition:0.3s;
+
+}
+
+.worker-register-btn:hover{
+
+background:var(--olive-light);
+
+}
+
+.worker-register-login{
+
+margin-top:15px;
+font-size:14px;
+
+}
+
+.worker-register-login a{
 
 color:var(--olive);
 text-decoration:none;

@@ -1,11 +1,8 @@
 <?php include("includes/header.php"); ?>
 
 <section class="register-section">
-
 <div class="register-container">
-
 <h2 class="register-title">Create Account</h2>
-
 <p class="register-sub">
 Join HireX to find trusted workers near you
 </p>

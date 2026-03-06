@@ -36,8 +36,8 @@ Hire<span>X</span>
 <a href="register.php" class="btn btn-primary">Register</a>
 <a href="login.php" class="btn btn-outline">Login</a>
 
-<a href="#" class="contractor-link">
-For Contractors ↗
+<a href="worker_register.php" class="contractor-link">
+For Workers ↗
 </a>
 
 </div>
