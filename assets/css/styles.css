@@ -284,6 +284,16 @@ transition:0.3s;
 
 
 
+
+
+
+
+
+
+
+
+
+
 /* LOGIN PAGE */
 
 .login-section{
@@ -376,6 +386,118 @@ font-size:14px;
 }
 
 .login-register a{
+
+color:var(--olive);
+text-decoration:none;
+font-weight:600;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* REGISTER PAGE */
+
+.register-section{
+
+min-height:calc(100vh - 70px);
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+background:
+linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)),
+url("../images/bg.png");
+
+background-size:cover;
+background-position:center;
+
+}
+
+.register-container{
+
+width:420px;
+max-width:90%;
+background:white;
+padding:40px;
+border-radius:12px;
+box-shadow:0 15px 40px rgba(0,0,0,0.1);
+text-align:center;
+
+}
+
+.register-title{
+
+font-family:'Playfair Display',serif;
+font-size:30px;
+margin-bottom:8px;
+
+}
+
+.register-sub{
+
+color:var(--muted);
+margin-bottom:25px;
+
+}
+
+.register-form input{
+
+width:100%;
+padding:12px;
+margin-bottom:15px;
+border:1px solid var(--border);
+border-radius:8px;
+font-size:14px;
+
+}
+
+.register-form input:focus{
+
+outline:none;
+border-color:var(--olive);
+
+}
+
+.register-btn{
+
+width:100%;
+padding:12px;
+background:var(--olive);
+color:white;
+border:none;
+border-radius:8px;
+font-size:15px;
+cursor:pointer;
+transition:0.3s;
+
+}
+
+.register-btn:hover{
+
+background:var(--olive-light);
+
+}
+
+.register-login{
+
+margin-top:15px;
+font-size:14px;
+
+}
+
+.register-login a{
 
 color:var(--olive);
 text-decoration:none;
