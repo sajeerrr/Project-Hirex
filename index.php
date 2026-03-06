@@ -42,18 +42,12 @@ Hire trusted electricians, plumbers, carpenters and technicians instantly
 <div class="logos-row">
 
 <div class="company-logo">⚡ Electricians</div>
-<div class="company-logo">🚰 Plumbers</div>
+<div class="company-logo">🔧 Plumbers</div>
 <div class="company-logo">🪚 Carpenters</div>
 <div class="company-logo">🖌️ Painters</div>
-<div class="company-logo">🧰 Technicians</div>
+<div class="company-logo">🛠️ Technicians</div>
 
 </div>
-
-</div>
-
-<div class="illustration-wrap">
-
-<img src="/assets/images/worker.png" class="desk-scene">
 
 </div>
 
