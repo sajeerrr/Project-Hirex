@@ -1,18 +1,44 @@
 <?php include("includes/header.php"); ?>
 
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-4">
-            <div class="card shadow p-4">
-                <h3 class="text-center mb-3">Login</h3>
-                <form method="POST">
-                    <input type="email" class="form-control mb-3" placeholder="Email" required>
-                    <input type="password" class="form-control mb-3" placeholder="Password" required>
-                    <button class="btn btn-warning w-100">Login</button>
-                </form>
-            </div>
-        </div>
-    </div>
+<section class="login-section">
+
+<div class="login-container">
+
+<h2 class="login-title">Welcome Back</h2>
+
+<p class="login-sub">
+Login to continue to HireX
+</p>
+
+<form class="login-form" method="POST">
+
+<input 
+type="email" 
+name="email"
+placeholder="Email Address"
+required
+>
+
+<input 
+type="password"
+name="password"
+placeholder="Password"
+required
+>
+
+<button type="submit" class="login-btn">
+Login
+</button>
+
+</form>
+
+<p class="login-register">
+Don't have an account? 
+<a href="register.php">Register</a>
+</p>
+
 </div>
+
+</section>
 
 <?php include("includes/footer.php"); ?>
