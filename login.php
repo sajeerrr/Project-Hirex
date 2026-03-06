@@ -1,4 +1,89 @@
-<?php include("includes/header.php"); ?>
+<?php
+
+session_start();
+
+include("includes/header.php");
+include("database/db.php");
+
+if(isset($_POST['login'])){
+
+$email = $_POST['email'];
+$password = $_POST['password'];
+
+/* CHECK USERS */
+
+$sql = "SELECT * FROM users WHERE email='$email'";
+$result = $conn->query($sql);
+
+if($result->num_rows > 0){
+
+$user = $result->fetch_assoc();
+
+if(password_verify($password,$user['password'])){
+
+$_SESSION['user_id'] = $user['id'];
+$_SESSION['role'] = 'user';
+
+header("Location:user/dashboard.php");
+exit;
+
+}else{
+echo "Wrong password";
+}
+
+}
+
+/* CHECK WORKERS */
+
+$sql = "SELECT * FROM workers WHERE email='$email'";
+$result = $conn->query($sql);
+
+if($result->num_rows > 0){
+
+$worker = $result->fetch_assoc();
+
+if(password_verify($password,$worker['password'])){
+
+$_SESSION['worker_id'] = $worker['id'];
+$_SESSION['role'] = 'worker';
+
+header("Location:worker/dashboard.php");
+exit;
+
+}else{
+echo "Wrong password";
+}
+
+}
+
+/* CHECK ADMIN */
+
+$sql = "SELECT * FROM admin WHERE email='$email'";
+$result = $conn->query($sql);
+
+if($result->num_rows > 0){
+
+$admin = $result->fetch_assoc();
+
+if(password_verify($password,$admin['password'])){
+
+$_SESSION['admin_id'] = $admin['id'];
+$_SESSION['role'] = 'admin';
+
+header("Location:admin/dashboard.php");
+exit;
+
+}else{
+echo "Wrong password";
+}
+
+}
+
+echo "Account not found";
+
+}
+
+?>
 
 <section class="login-section">
 
@@ -26,7 +111,7 @@ placeholder="Password"
 required
 >
 
-<button type="submit" class="login-btn">
+<button type="submit" class="login-btn" name="login">
 Login
 </button>
 

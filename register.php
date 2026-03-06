@@ -1,4 +1,25 @@
-<?php include("includes/header.php"); ?>
+<?php
+
+include("includes/header.php");
+include("database/db.php");
+
+if(isset($_POST['register'])){
+
+$name = $_POST['name'];
+$email = $_POST['email'];
+$password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+$city = $_POST['city'];
+
+$sql = "INSERT INTO users (name,email,password,city)
+VALUES ('$name','$email','$password','$city')";
+
+$conn->query($sql);
+
+echo "<script>alert('Registration Successful');</script>";
+
+}
+
+?>
 
 <section class="register-section">
 <div class="register-container">
@@ -37,7 +58,7 @@ placeholder="City"
 required
 >
 
-<button type="submit" class="register-btn">
+<button type="submit" class="register-btn" name="register">
 Register
 </button>
 

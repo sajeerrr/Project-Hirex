@@ -1,4 +1,31 @@
-<?php include("includes/header.php"); ?>
+<?php
+
+include("includes/header.php");
+include("database/db.php");
+
+if(isset($_POST['register_worker'])){
+
+$name = $_POST['name'];
+$email = $_POST['email'];
+$password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+$city = $_POST['city'];
+$category = $_POST['category'];
+
+$photo = $_FILES['photo']['name'];
+$tmp = $_FILES['photo']['tmp_name'];
+
+move_uploaded_file($tmp,"assets/images/workers/".$photo);
+
+$sql = "INSERT INTO workers (name,email,password,city,category,photo)
+VALUES ('$name','$email','$password','$city','$category','$photo')";
+
+$conn->query($sql);
+
+echo "<script>alert('Worker Registered Successfully');</script>";
+
+}
+
+?>
 
 <section class="worker-register-section">
 
@@ -56,7 +83,7 @@ type="file"
 name="photo"
 >
 
-<button type="submit" class="worker-register-btn">
+<button type="submit" class="worker-register-btn" name="register_worker">
 Register
 </button>
 
