@@ -8,6 +8,7 @@
 <title>HireX - Find Skilled Workers</title>
 
 <link rel="stylesheet" href="/hirex/assets/css/styles.css">
+<link rel="stylesheet" href="/hirex/assets/css/dashboard.css">
 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 
