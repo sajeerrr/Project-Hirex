@@ -1,0 +1,309 @@
+/* RESET */
+
+*,
+*::before,
+*::after{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+font-family:'Plus Jakarta Sans',sans-serif;
+background:#f2f4fb;
+color:#1a1d2e;
+display:flex;
+min-height:100vh;
+overflow-x:hidden;
+}
+
+/* VARIABLES */
+
+:root{
+
+--olive:#6B8E23;
+--olive-dark:#556B2F;
+--olive-soft:#eef5e6;
+
+--sidebar-w:230px;
+--topbar-h:68px;
+
+--text:#1a1d2e;
+--muted:#6b7280;
+
+--border:#e8ebf4;
+
+--white:#ffffff;
+--bg:#f2f4fb;
+
+--green:#10B981;
+--orange:#F59E0B;
+--red:#EF4444;
+--purple:#8B5CF6;
+
+--radius:14px;
+
+--shadow:0 2px 16px rgba(0,0,0,0.08);
+
+}
+
+/* SIDEBAR */
+
+.sidebar{
+width:var(--sidebar-w);
+background:var(--olive);
+min-height:100vh;
+position:fixed;
+left:0;
+top:0;
+display:flex;
+flex-direction:column;
+padding-bottom:24px;
+color:white;
+}
+
+.sidebar-logo{
+padding:22px 24px;
+font-size:23px;
+font-weight:800;
+border-bottom:1px solid rgba(255,255,255,0.2);
+}
+
+.sidebar-nav{
+padding:10px 12px;
+}
+
+.nav-group{
+font-size:11px;
+text-transform:uppercase;
+opacity:.6;
+padding:10px 12px;
+}
+
+.nav-item{
+display:flex;
+align-items:center;
+gap:10px;
+padding:11px 12px;
+border-radius:8px;
+text-decoration:none;
+color:white;
+font-size:14px;
+transition:0.2s;
+}
+
+.nav-item:hover{
+background:rgba(255,255,255,0.15);
+}
+
+.nav-item.active{
+background:rgba(255,255,255,0.25);
+font-weight:600;
+}
+
+/* MAIN */
+
+.main{
+margin-left:var(--sidebar-w);
+flex:1;
+display:flex;
+flex-direction:column;
+}
+
+/* TOPBAR */
+
+.topbar{
+height:var(--topbar-h);
+background:white;
+border-bottom:1px solid var(--border);
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:0 30px;
+}
+
+.topbar h1{
+font-size:20px;
+font-weight:700;
+}
+
+/* AVATAR */
+
+.t-avatar{
+width:38px;
+height:38px;
+background:var(--olive);
+border-radius:10px;
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:700;
+}
+
+/* PAGE BODY */
+
+.page-body{
+padding:30px;
+}
+
+/* STAT GRID */
+
+.stat-grid{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:16px;
+margin-bottom:24px;
+}
+
+/* STAT CARD */
+
+.stat-card{
+background:white;
+padding:20px;
+border-radius:var(--radius);
+border:1px solid var(--border);
+box-shadow:var(--shadow);
+}
+
+.stat-card:hover{
+transform:translateY(-3px);
+}
+
+.sc-num{
+font-size:28px;
+font-weight:800;
+}
+
+.sc-label{
+font-size:13px;
+color:var(--muted);
+}
+
+/* PANEL */
+
+.panel{
+background:white;
+border-radius:var(--radius);
+box-shadow:var(--shadow);
+border:1px solid var(--border);
+overflow:hidden;
+}
+
+/* PANEL HEADER */
+
+.ph{
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:16px 20px;
+border-bottom:1px solid var(--border);
+}
+
+.ph-title{
+font-weight:700;
+}
+
+/* TABLE */
+
+.data-table{
+width:100%;
+border-collapse:collapse;
+}
+
+.data-table th{
+font-size:12px;
+color:var(--muted);
+padding:12px 18px;
+text-align:left;
+border-bottom:1px solid var(--border);
+background:#fafbff;
+}
+
+.data-table td{
+padding:12px 18px;
+font-size:14px;
+border-bottom:1px solid var(--border);
+}
+
+/* AVATAR */
+
+.av{
+width:32px;
+height:32px;
+border-radius:8px;
+background:var(--olive);
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+font-weight:700;
+}
+
+/* STATUS */
+
+.pill{
+padding:4px 10px;
+border-radius:20px;
+font-size:12px;
+font-weight:600;
+}
+
+.pill.pending{
+background:#FEF3C7;
+color:#92400E;
+}
+
+.pill.completed{
+background:#D1FAE5;
+color:#065F46;
+}
+
+.pill.cancelled{
+background:#FEE2E2;
+color:#991B1B;
+}
+
+/* BUTTONS */
+
+.act{
+width:28px;
+height:28px;
+border-radius:6px;
+border:1px solid var(--border);
+background:#f9fafb;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+}
+
+.act:hover{
+background:var(--olive-soft);
+}
+
+/* RESPONSIVE */
+
+@media(max-width:1100px){
+
+.stat-grid{
+grid-template-columns:repeat(2,1fr);
+}
+
+}
+
+@media(max-width:768px){
+
+.sidebar{
+display:none;
+}
+
+.main{
+margin-left:0;
+}
+
+.stat-grid{
+grid-template-columns:1fr;
+}
+
+}
