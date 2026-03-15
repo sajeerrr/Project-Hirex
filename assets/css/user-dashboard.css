@@ -1,65 +1,80 @@
-body{
-font-family:'Plus Jakarta Sans',sans-serif;
-background:#f4f6fc;
-margin:0;
-}
-
-/* LAYOUT */
+/* USER DASHBOARD LAYOUT */
 
 .dashboard-layout{
 display:flex;
-min-height:100vh;
+min-height:calc(100vh - 70px);
 }
 
 /* SIDEBAR */
 
 .sidebar{
-width:220px;
-background:#3B5BDB;
+width:230px;
+background:var(--olive);
 color:white;
-padding:20px;
+padding:25px 18px;
+display:flex;
+flex-direction:column;
 }
 
 .sidebar-logo{
 font-size:22px;
 font-weight:700;
-margin-bottom:30px;
+margin-bottom:25px;
+}
+
+.sidebar-logo span{
+opacity:0.7;
 }
 
 .sidebar-nav a{
 display:block;
-padding:10px;
+padding:10px 12px;
+border-radius:6px;
+margin-bottom:6px;
 color:white;
 text-decoration:none;
-border-radius:6px;
-margin-bottom:5px;
+font-size:14px;
+transition:0.3s;
 }
 
 .sidebar-nav a:hover{
-background:rgba(255,255,255,0.2);
+background:rgba(255,255,255,0.15);
 }
 
-/* MAIN */
+.sidebar-nav a.active{
+background:rgba(255,255,255,0.25);
+font-weight:600;
+}
+
+/* MAIN AREA */
 
 .main{
 flex:1;
+background:var(--bg);
+display:flex;
+flex-direction:column;
 }
 
 /* TOPBAR */
 
 .topbar{
 background:white;
-padding:15px 30px;
+height:70px;
+padding:0 25px;
 display:flex;
-justify-content:space-between;
 align-items:center;
-border-bottom:1px solid #e8ebf4;
+justify-content:space-between;
+border-bottom:1px solid var(--border);
+}
+
+.topbar h2{
+font-size:20px;
 }
 
 .avatar{
 width:40px;
 height:40px;
-background:#3B5BDB;
+background:var(--olive-light);
 color:white;
 display:flex;
 align-items:center;
@@ -68,13 +83,13 @@ border-radius:8px;
 font-weight:700;
 }
 
-/* BODY */
+/* PAGE BODY */
 
 .page-body{
 padding:30px;
 }
 
-/* STATS */
+/* STATISTICS */
 
 .stat-grid{
 display:grid;
@@ -86,19 +101,27 @@ margin-bottom:30px;
 .stat-card{
 background:white;
 padding:20px;
-border-radius:12px;
-box-shadow:0 2px 16px rgba(0,0,0,0.08);
+border-radius:10px;
+box-shadow:0 10px 30px rgba(0,0,0,0.08);
 text-align:center;
+transition:0.3s;
+}
+
+.stat-card:hover{
+transform:translateY(-4px);
 }
 
 .stat-card h3{
 font-size:28px;
+margin-bottom:5px;
 }
 
-/* WORKERS */
+/* WORKERS SECTION */
 
 .section-title{
 margin-bottom:15px;
+font-size:18px;
+font-weight:600;
 }
 
 .workers-grid{
@@ -110,8 +133,13 @@ gap:20px;
 .worker-card{
 background:white;
 padding:20px;
-border-radius:12px;
-box-shadow:0 2px 16px rgba(0,0,0,0.08);
+border-radius:10px;
+box-shadow:0 10px 30px rgba(0,0,0,0.08);
+transition:0.3s;
+}
+
+.worker-card:hover{
+transform:translateY(-3px);
 }
 
 .worker-card h4{
@@ -119,24 +147,26 @@ margin-bottom:5px;
 }
 
 .rating{
-color:#FBBF24;
+color:#fbbf24;
+margin:6px 0;
 }
 
 .rate{
-margin:10px 0;
 font-weight:600;
+margin-bottom:10px;
 }
 
 .hire-btn{
 width:100%;
 padding:10px;
-background:#3B5BDB;
-color:white;
 border:none;
 border-radius:8px;
+background:var(--olive);
+color:white;
 cursor:pointer;
+transition:0.3s;
 }
 
 .hire-btn:hover{
-background:#2f4ac7;
+background:var(--olive-light);
 }
