@@ -2,7 +2,7 @@
 
 ## Abstract
 
-HireX is a web-based and mobile-enabled application designed to simplify and streamline the process of finding reliable contractors and skilled workers in urban environments. The platform addresses the challenges of fragmented service discovery by providing a centralized system that connects users with verified service providers across multiple cities.
+HireX is a web-based application designed to simplify and streamline the process of finding reliable contractors and skilled workers in urban environments. The platform addresses the challenges of fragmented service discovery by providing a centralized system that connects users with verified service providers across multiple cities.
 
 Users can:
 - Search for professionals based on location, specialization, availability, and ratings  
@@ -13,7 +13,7 @@ Users can:
 
 ## Technologies Used
 
-The system is developed using modern web and mobile technologies:
+The system is developed using modern web technologies:
 
 - **Backend:** PHP, MySQL  
 - **Frontend:** HTML5, CSS3, Bootstrap  
