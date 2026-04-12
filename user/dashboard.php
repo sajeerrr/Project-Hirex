@@ -42,6 +42,7 @@ if ($result->num_rows > 0) {
         }
 
         $workers[] = [
+            "id" => $row['id'],
             "name" => $row['name'],
             "role" => $row['role'],
             "rating" => $row['rating'],
@@ -1022,7 +1023,6 @@ function getIcon($name, $size = 20, $class = '') {
             </a>
             <a href="messages.php" class="nav-item">
                 <?php echo getIcon('message', 18); ?> Messages
-                <span class="badge">3</span>
             </a>
             <a href="#" class="nav-item">
                 <?php echo getIcon('calendar', 18); ?> My Bookings
@@ -1206,7 +1206,8 @@ function getIcon($name, $size = 20, $class = '') {
                         
                         <div class="card-footer">
                             <div class="price"><?php echo htmlspecialchars($worker['price']); ?></div>
-                            <button class="btn-hire" onclick="hireWorker('<?php echo htmlspecialchars($worker['name']); ?>', '<?php echo htmlspecialchars($worker['role']); ?>')">
+                            <button class="btn-hire"
+                                onclick="window.location.href='worker_details.php?id=<?php echo $worker['id']; ?>'">
                                 View <?php echo getIcon('arrow-right', 13); ?>
                             </button>
                         </div>
@@ -1226,6 +1227,7 @@ function getIcon($name, $size = 20, $class = '') {
 </div>
 
 <script>
+
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('overlay');

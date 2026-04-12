@@ -580,7 +580,7 @@ function getIcon($name, $size = 20, $class = '') {
             <div class="nav-label">Main Menu</div>
             <a href="dashboard.php" class="nav-item"><?php echo getIcon('dashboard', 18); ?> Dashboard</a>
             <a href="profile.php" class="nav-item active"><?php echo getIcon('user', 18); ?> My Profile</a>
-            <a href="messages.php" class="nav-item"><?php echo getIcon('message', 18); ?> Messages <span class="badge">3</span></a>
+            <a href="messages.php" class="nav-item"><?php echo getIcon('message', 18); ?> Messages</a>
             <a href="#" class="nav-item"><?php echo getIcon('calendar', 18); ?> My Bookings</a>
         </div>
         <div class="nav-group">
