@@ -1017,10 +1017,10 @@ function getIcon($name, $size = 20, $class = '') {
             <a href="#" class="nav-item active">
                 <?php echo getIcon('dashboard', 18); ?> Dashboard
             </a>
-            <a href="#" class="nav-item">
+            <a href="profile.php" class="nav-item">
                 <?php echo getIcon('user', 18); ?> My Profile
             </a>
-            <a href="#" class="nav-item">
+            <a href="messages.php" class="nav-item">
                 <?php echo getIcon('message', 18); ?> Messages
                 <span class="badge">3</span>
             </a>
