@@ -1,86 +1,60 @@
 <?php
 session_start();
 
+include("../database/db.php"); // db connection line
+
+if(!isset($_SESSION['user_id'])){
+    header("Location: ../login.php");
+    exit;
+}
+
 // Security: Validate session and sanitize output
-$userName = isset($_SESSION['name']) ? htmlspecialchars($_SESSION['name'], ENT_QUOTES, 'UTF-8') : 'Arun Sharma';
+$user_id = $_SESSION['user_id'];
+
+$userQuery = "SELECT * FROM users WHERE id='$user_id'";
+$userResult = $conn->query($userQuery);
+$user = $userResult->fetch_assoc();
+
+$userName = htmlspecialchars($user['name']);
+
 $userInitial = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $userName), 0, 1));
 $userInitial = !empty($userInitial) ? $userInitial : 'A';
 
+
 // Sample Worker Data with Profile Photos
-$workers = [
-    [
-        "name" => "Rajan Kumar",
-        "role" => "Electrician",
-        "rating" => "4.8",
-        "price" => "₹400/hr",
-        "reviews" => 120,
-        "available" => true,
-        "photo" => "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face",
-        "experience" => "8 yrs",
-        "jobs" => 450,
-        "location" => "Mumbai"
-    ],
-    [
-        "name" => "Suresh Menon",
-        "role" => "Plumber",
-        "rating" => "5.0",
-        "price" => "₹350/hr",
-        "reviews" => 245,
-        "available" => true,
-        "photo" => "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop&crop=face",
-        "experience" => "12 yrs",
-        "jobs" => 680,
-        "location" => "Bangalore"
-    ],
-    [
-        "name" => "Arjun Pillai",
-        "role" => "Carpenter",
-        "rating" => "3.9",
-        "price" => "₹500/hr",
-        "reviews" => 89,
-        "available" => false,
-        "photo" => "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&crop=face",
-        "experience" => "6 yrs",
-        "jobs" => 320,
-        "location" => "Kochi"
-    ],
-    [
-        "name" => "Vijay Nair",
-        "role" => "Painter",
-        "rating" => "4.5",
-        "price" => "₹300/hr",
-        "reviews" => 156,
-        "available" => true,
-        "photo" => "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=300&fit=crop&crop=face",
-        "experience" => "10 yrs",
-        "jobs" => 520,
-        "location" => "Chennai"
-    ],
-    [
-        "name" => "Ramesh Gupta",
-        "role" => "AC Technician",
-        "rating" => "4.7",
-        "price" => "₹450/hr",
-        "reviews" => 203,
-        "available" => true,
-        "photo" => "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&h=300&fit=crop&crop=face",
-        "experience" => "9 yrs",
-        "jobs" => 590,
-        "location" => "Delhi"
-    ],
-    [
-        "name" => "Deepak Singh",
-        "role" => "Mechanic",
-        "rating" => "4.2",
-        "price" => "₹380/hr",
-        "reviews" => 178,
-        "available" => false,
-        "photo" => "https://images.unsplash.com/photo-1504257432389-52343af06ae3?w=300&h=300&fit=crop&crop=face",
-        "experience" => "7 yrs",
-        "jobs" => 410,
-        "location" => "Pune"
-    ],
-];
+$workers = [];
+
+$sql = "SELECT * FROM workers"; // your table name
+$result = $conn->query($sql);
+
+if ($result->num_rows > 0) {
+    while($row = $result->fetch_assoc()) {
+
+        // image logic
+        $photo = $row['photo'];
+
+        if (filter_var($photo, FILTER_VALIDATE_URL)) {
+            // If photo is a URL, use it directly
+            $photoPath = $photo;
+        } else {
+            // If photo is a local file
+            $photoPath = "../assets/images/workers/" . $photo;
+        }
+
+        $workers[] = [
+            "name" => $row['name'],
+            "role" => $row['role'],
+            "rating" => $row['rating'],
+            "price" => "₹" . $row['price'] . "/hr",
+            "reviews" => $row['reviews'],
+            "available" => $row['available'], // 1 or 0
+            "photo" => $photoPath,
+            "experience" => $row['experience'],
+            "jobs" => $row['jobs'],
+            "location" => $row['location']
+        ];
+    }
+}
 
 // Job categories with SVG icons
 $jobCategories = [
@@ -119,9 +93,10 @@ usort($filteredWorkers, function($a, $b) use ($sortFilter) {
 });
 
 // Calculate stats
-$totalWorkers = count($workers);
-$availableWorkers = count(array_filter($workers, fn($w) => $w['available']));
-$avgRating = round(array_sum(array_column($workers, 'rating')) / count($workers), 1);
+$totalWorkers = $conn->query("SELECT COUNT(*) as total FROM workers")->fetch_assoc()['total'];
+$availableWorkers = $conn->query("SELECT COUNT(*) as total FROM workers WHERE available=1")->fetch_assoc()['total'];
+$avgRating = $conn->query("SELECT AVG(rating) as avg FROM workers")->fetch_assoc()['avg'];
+$avgRating = $avgRating ? round($avgRating, 1) : 0;
 
 // SVG Icon Function
 function getIcon($name, $size = 20, $class = '') {

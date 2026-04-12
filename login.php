@@ -6,78 +6,60 @@ include("database/db.php");
 
 if(isset($_POST['login'])){
 
-$email = $_POST['email'];
-$password = $_POST['password'];
+    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $password = $_POST['password'];
 
-/* CHECK USERS */
+    // ---------- CHECK USER ----------
+    $userQuery = "SELECT * FROM users WHERE email='$email'";
+    $userResult = $conn->query($userQuery);
 
-$sql = "SELECT * FROM users WHERE email='$email'";
-$result = $conn->query($sql);
+    if($userResult && $userResult->num_rows > 0){
+        $user = $userResult->fetch_assoc();
 
-if($result && $result->num_rows > 0){
+        if(password_verify($password, $user['password'])){
+            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['role'] = 'user';
 
-$user = $result->fetch_assoc();
+            header("Location: user/dashboard.php");
+            exit;
+        }
+    }
 
-if(password_verify($password,$user['password'])){
+    // ---------- CHECK WORKER ----------
+    $workerQuery = "SELECT * FROM workers WHERE email='$email'";
+    $workerResult = $conn->query($workerQuery);
 
-$_SESSION['user_id'] = $user['id'];
-$_SESSION['role'] = 'user';
+    if($workerResult && $workerResult->num_rows > 0){
+        $worker = $workerResult->fetch_assoc();
 
-header("Location: user/dashboard.php");
-exit;
+        if(password_verify($password, $worker['password'])){
+            $_SESSION['worker_id'] = $worker['id'];
+            $_SESSION['worker_name'] = $worker['name'];
+            $_SESSION['role'] = 'worker';
 
-}
+            header("Location: worker/dashboard.php");
+            exit;
+        }
+    }
 
-}
+    // ---------- CHECK ADMIN ----------
+    $adminQuery = "SELECT * FROM admin WHERE email='$email'";
+    $adminResult = $conn->query($adminQuery);
 
+    if($adminResult && $adminResult->num_rows > 0){
+        $admin = $adminResult->fetch_assoc();
 
-/* CHECK WORKERS */
+        if(password_verify($password, $admin['password'])){
+            $_SESSION['admin_id'] = $admin['id'];
+            $_SESSION['role'] = 'admin';
 
-$sql = "SELECT * FROM workers WHERE email='$email'";
-$result = $conn->query($sql);
+            header("Location: admin/dashboard.php");
+            exit;
+        }
+    }
 
-if($result && $result->num_rows > 0){
-
-$worker = $result->fetch_assoc();
-
-if(password_verify($password,$worker['password'])){
-
-$_SESSION['worker_id'] = $worker['id'];
-$_SESSION['role'] = 'worker';
-
-header("Location: worker/dashboard.php");
-exit;
-
-}
-
-}
-
-
-/* CHECK ADMIN */
-
-$sql = "SELECT * FROM admin WHERE email='$email'";
-$result = $conn->query($sql);
-
-if($result && $result->num_rows > 0){
-
-$admin = $result->fetch_assoc();
-
-if(password_verify($password,$admin['password'])){
-
-$_SESSION['admin_id'] = $admin['id'];
-$_SESSION['role'] = 'admin';
-
-header("Location: admin/dashboard.php");
-exit;
-
-}
-
-}
-
-/* IF NOTHING MATCHES */
-
-echo "Invalid email or password";
-
+    // ---------- IF NOTHING MATCH ----------
+    echo "<script>alert('Invalid Email or Password');</script>";
 }
 ?>
 
