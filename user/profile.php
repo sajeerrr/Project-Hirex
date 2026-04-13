@@ -581,13 +581,13 @@ function getIcon($name, $size = 20, $class = '') {
             <a href="dashboard.php" class="nav-item"><?php echo getIcon('dashboard', 18); ?> Dashboard</a>
             <a href="profile.php" class="nav-item active"><?php echo getIcon('user', 18); ?> My Profile</a>
             <a href="messages.php" class="nav-item"><?php echo getIcon('message', 18); ?> Messages</a>
-            <a href="#" class="nav-item"><?php echo getIcon('calendar', 18); ?> My Bookings</a>
+            <a href="booking.php" class="nav-item"><?php echo getIcon('calendar', 18); ?> My Bookings</a>
         </div>
         <div class="nav-group">
             <div class="nav-label">Preferences</div>
-            <a href="#" class="nav-item"><?php echo getIcon('bookmark', 18); ?> Saved Workers</a>
-            <a href="#" class="nav-item"><?php echo getIcon('card', 18); ?> Payments</a>
-            <a href="#" class="nav-item"><?php echo getIcon('settings', 18); ?> Settings</a>
+            <a href="saved-worker.php" class="nav-item"><?php echo getIcon('bookmark', 18); ?> Saved Workers</a>
+            <a href="payment.php" class="nav-item"><?php echo getIcon('card', 18); ?> Payments</a>
+            <a href="settings.php" class="nav-item"><?php echo getIcon('settings', 18); ?> Settings</a>
         </div>
         <div class="nav-group">
             <div class="nav-label">Support</div>

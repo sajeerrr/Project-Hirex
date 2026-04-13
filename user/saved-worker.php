@@ -20,61 +20,75 @@ $userName = htmlspecialchars($user['name']);
 $userInitial = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $userName), 0, 1));
 $userInitial = !empty($userInitial) ? $userInitial : 'A';
 
+// Handle remove from saved
+if (isset($_POST['remove_saved'])) {
+    $workerId = intval($_POST['worker_id']);
+    $removeQuery = "DELETE FROM saved_workers WHERE user_id='$user_id' AND worker_id='$workerId'";
+    if ($conn->query($removeQuery)) {
+        header("Location: saved-workers.php?removed=1");
+        exit;
+    }
+}
 
-// Sample Worker Data with Profile Photos
-$workers = [];
+// Handle clear all saved
+if (isset($_POST['clear_all'])) {
+    $clearQuery = "DELETE FROM saved_workers WHERE user_id='$user_id'";
+    if ($conn->query($clearQuery)) {
+        header("Location: saved-workers.php?cleared=1");
+        exit;
+    }
+}
 
-$sql = "SELECT * FROM workers"; // your table name
-$result = $conn->query($sql);
+// Fetch saved workers from database
+$savedWorkers = [];
 
-if ($result->num_rows > 0) {
-    while($row = $result->fetch_assoc()) {
+$savedQuery = "SELECT sw.*, w.name, w.role, w.rating, w.price, w.photo, w.reviews, 
+               w.available, w.experience, w.jobs, w.location, sw.created_at as saved_date
+               FROM saved_workers sw 
+               LEFT JOIN workers w ON sw.worker_id = w.id 
+               WHERE sw.user_id = '$user_id' 
+               ORDER BY sw.created_at DESC";
 
-        // image logic
-        $photo = $row['photo'];
+$savedResult = $conn->query($savedQuery);
 
-        if (filter_var($photo, FILTER_VALIDATE_URL)) {
-            // If photo is a URL, use it directly
-            $photoPath = $photo;
+if ($savedResult && $savedResult->num_rows > 0) {
+    while($row = $savedResult->fetch_assoc()) {
+        // Worker photo logic
+        $workerPhoto = $row['photo'];
+        if (!empty($workerPhoto)) {
+            if (filter_var($workerPhoto, FILTER_VALIDATE_URL)) {
+                $workerPhotoPath = $workerPhoto;
+            } else {
+                $workerPhotoPath = "../assets/images/workers/" . $workerPhoto;
+            }
         } else {
-            // If photo is a local file
-            $photoPath = "../assets/images/workers/" . $photo;
+            $workerPhotoPath = "https://ui-avatars.com/api/" . urlencode($row['name'] ?? 'W') . "/110/16a34a/ffffff?rounded=true";
         }
-
-        $workers[] = [
-            "id" => $row['id'],
-            "name" => $row['name'],
-            "role" => $row['role'],
-            "rating" => $row['rating'],
-            "price" => "₹" . $row['price'] . "/hr",
-            "reviews" => $row['reviews'],
-            "available" => $row['available'], // 1 or 0
-            "photo" => $photoPath,
-            "experience" => $row['experience'],
-            "jobs" => $row['jobs'],
-            "location" => $row['location']
+        
+        $savedWorkers[] = [
+            "id" => $row['worker_id'],
+            "name" => $row['name'] ?? 'Unknown Worker',
+            "role" => $row['role'] ?? 'Service Professional',
+            "rating" => $row['rating'] ?? 0,
+            "price" => $row['price'] ?? 0,
+            "photo" => $workerPhotoPath,
+            "reviews" => $row['reviews'] ?? 0,
+            "available" => $row['available'] ?? 0,
+            "experience" => $row['experience'] ?? 0,
+            "jobs" => $row['jobs'] ?? 0,
+            "location" => $row['location'] ?? '',
+            "saved_date" => $row['saved_date'] ?? ''
         ];
     }
 }
 
-// Job categories with SVG icons
-$jobCategories = [
-    ["id" => "all", "name" => "All", "icon" => "grid"],
-    ["id" => "Electrician", "name" => "Electrician", "icon" => "bolt"],
-    ["id" => "Plumber", "name" => "Plumber", "icon" => "drop"],
-    ["id" => "Carpenter", "name" => "Carpenter", "icon" => "hammer"],
-    ["id" => "Painter", "name" => "Painter", "icon" => "brush"],
-    ["id" => "AC Technician", "name" => "AC Tech", "icon" => "snowflake"],
-    ["id" => "Mechanic", "name" => "Mechanic", "icon" => "wrench"],
-];
-
 // Get filter parameters
 $searchQuery = isset($_GET['search']) ? htmlspecialchars($_GET['search'], ENT_QUOTES, 'UTF-8') : '';
 $categoryFilter = isset($_GET['category']) ? htmlspecialchars($_GET['category'], ENT_QUOTES, 'UTF-8') : 'all';
-$sortFilter = isset($_GET['sort']) ? htmlspecialchars($_GET['sort'], ENT_QUOTES, 'UTF-8') : 'rating';
+$sortFilter = isset($_GET['sort']) ? htmlspecialchars($_GET['sort'], ENT_QUOTES, 'UTF-8') : 'saved_date';
 
-// Filter workers
-$filteredWorkers = array_filter($workers, function($worker) use ($searchQuery, $categoryFilter) {
+// Filter saved workers
+$filteredWorkers = array_filter($savedWorkers, function($worker) use ($searchQuery, $categoryFilter) {
     $matchesSearch = empty($searchQuery) || 
                      stripos($worker['name'], $searchQuery) !== false || 
                      stripos($worker['role'], $searchQuery) !== false;
@@ -82,14 +96,16 @@ $filteredWorkers = array_filter($workers, function($worker) use ($searchQuery, $
     return $matchesSearch && $matchesCategory;
 });
 
-// Sort workers
+// Sort saved workers
 usort($filteredWorkers, function($a, $b) use ($sortFilter) {
     switch($sortFilter) {
         case 'rating': return floatval($b['rating']) - floatval($a['rating']);
-        case 'price_low': return intval(preg_replace('/[^0-9]/', '', $a['price'])) - intval(preg_replace('/[^0-9]/', '', $b['price']));
-        case 'price_high': return intval(preg_replace('/[^0-9]/', '', $b['price'])) - intval(preg_replace('/[^0-9]/', '', $a['price']));
+        case 'price_low': return intval($b['price']) - intval($a['price']);
+        case 'price_high': return intval($a['price']) - intval($b['price']);
         case 'reviews': return $b['reviews'] - $a['reviews'];
-        default: return 0;
+        case 'saved_date': 
+        default: 
+            return strtotime($b['saved_date']) - strtotime($a['saved_date']);
     }
 });
 
@@ -103,11 +119,16 @@ if (!empty($user['photo'])) {
     }
 }
 
-// Calculate stats
-$totalWorkers = $conn->query("SELECT COUNT(*) as total FROM workers")->fetch_assoc()['total'];
-$availableWorkers = $conn->query("SELECT COUNT(*) as total FROM workers WHERE available=1")->fetch_assoc()['total'];
-$avgRating = $conn->query("SELECT AVG(rating) as avg FROM workers")->fetch_assoc()['avg'];
-$avgRating = $avgRating ? round($avgRating, 1) : 0;
+// Job categories with SVG icons
+$jobCategories = [
+    ["id" => "all", "name" => "All", "icon" => "grid"],
+    ["id" => "Electrician", "name" => "Electrician", "icon" => "bolt"],
+    ["id" => "Plumber", "name" => "Plumber", "icon" => "drop"],
+    ["id" => "Carpenter", "name" => "Carpenter", "icon" => "hammer"],
+    ["id" => "Painter", "name" => "Painter", "icon" => "brush"],
+    ["id" => "AC Technician", "name" => "AC Tech", "icon" => "snowflake"],
+    ["id" => "Mechanic", "name" => "Mechanic", "icon" => "wrench"],
+];
 
 // SVG Icon Function
 function getIcon($name, $size = 20, $class = '') {
@@ -124,6 +145,7 @@ function getIcon($name, $size = 20, $class = '') {
         'message' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
         'calendar' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
         'bookmark' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
+        'bookmark-fill' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>',
         'card' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
         'settings' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
         'help' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
@@ -142,8 +164,41 @@ function getIcon($name, $size = 20, $class = '') {
         'workers' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
         'arrow-right' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
         'location' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+        'trash' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+        'rupee' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5-10"/><path d="M6 13h3"/><path d="M9 13c6.627 0 7.755 5.373 8.5 10H9V13z"/></svg>',
+        'filter' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',
+        'heart' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+        'heart-fill' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
     ];
     return $icons[$name] ?? '';
+}
+
+// Format saved date helper
+function formatSavedDate($date) {
+    if (empty($date)) return '';
+    $timestamp = strtotime($date);
+    $now = time();
+    $diff = $now - $timestamp;
+    
+    if ($diff < 60) return 'Just now';
+    if ($diff < 3600) return floor($diff / 60) . ' min ago';
+    if ($diff < 86400) return floor($diff / 3600) . ' hours ago';
+    if ($diff < 604800) return floor($diff / 86400) . ' days ago';
+    
+    return date('M d, Y', $timestamp);
+}
+
+// Get role icon
+function getRoleIcon($role) {
+    switch($role) {
+        case 'Electrician': return 'bolt';
+        case 'Plumber': return 'drop';
+        case 'Carpenter': return 'hammer';
+        case 'Painter': return 'brush';
+        case 'AC Technician': return 'snowflake';
+        case 'Mechanic': return 'wrench';
+        default: return 'briefcase';
+    }
 }
 ?>
 
@@ -152,8 +207,8 @@ function getIcon($name, $size = 20, $class = '') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="HireX - Find and hire skilled workers easily">
-    <title>Dashboard — HireX</title>
+    <meta name="description" content="HireX - Your Saved Workers">
+    <title>Saved Workers — HireX</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -569,7 +624,7 @@ function getIcon($name, $size = 20, $class = '') {
             font-size: 13px;
         }
 
-        /* --- FILTER BAR (One Line) --- */
+        /* --- FILTER BAR --- */
         .filter-bar {
             display: flex;
             align-items: center;
@@ -618,7 +673,7 @@ function getIcon($name, $size = 20, $class = '') {
 
         .job-chip svg { width: 14px; height: 14px; }
 
-        /* Sort Select - Right Side of Job Filters */
+        /* Sort Select */
         .sort-select {
             padding: 9px 15px;
             border-radius: 26px;
@@ -647,7 +702,31 @@ function getIcon($name, $size = 20, $class = '') {
             margin-left: 12px;
         }
 
-        /* --- GRID - 3 Cards Per Row --- */
+        .btn-clear-all {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 9px 16px;
+            border-radius: 26px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 12px;
+        }
+
+        .btn-clear-all:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-clear-all svg { width: 14px; height: 14px; }
+
+        /* --- WORKER GRID --- */
         .worker-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -757,12 +836,8 @@ function getIcon($name, $size = 20, $class = '') {
 
         .bookmark-btn:hover {
             transform: scale(1.1);
-            border-color: var(--primary);
-        }
-
-        .bookmark-btn.active {
-            background: var(--danger);
             border-color: var(--danger);
+            background: var(--danger);
             color: white;
         }
 
@@ -843,6 +918,14 @@ function getIcon($name, $size = 20, $class = '') {
 
         .meta-item svg { width: 11px; height: 11px; }
 
+        .saved-date {
+            font-size: 10px;
+            color: var(--text-gray);
+            margin-bottom: 8px;
+        }
+
+        .saved-date svg { width: 10px; height: 10px; display: inline; vertical-align: middle; }
+
         /* Card Footer */
         .card-footer {
             display: flex;
@@ -889,6 +972,30 @@ function getIcon($name, $size = 20, $class = '') {
 
         .btn-hire svg { width: 13px; height: 13px; }
 
+        .btn-remove {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 9px 14px;
+            border-radius: 9px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-remove:hover {
+            background: var(--danger);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .btn-remove svg { width: 13px; height: 13px; }
+
         /* --- EMPTY STATE --- */
         .empty-state {
             grid-column: 1 / -1;
@@ -903,7 +1010,32 @@ function getIcon($name, $size = 20, $class = '') {
         .empty-state-icon { margin-bottom: 18px; opacity: 0.6; }
         .empty-state-icon svg { width: 55px; height: 55px; margin: 0 auto; }
         .empty-state h3 { margin: 0 0 8px 0; color: var(--text-primary); font-size: 18px; }
-        .empty-state p { font-size: 13px; }
+        .empty-state p { font-size: 13px; margin-bottom: 20px; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
+            color: white;
+            border: none;
+            padding: 11px 24px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--primary-hover), var(--mint-500));
+            transform: scale(1.05);
+            box-shadow: 0 5px 18px var(--shadow-lg);
+        }
+
+        .btn-primary svg { width: 16px; height: 16px; }
 
         /* --- TOAST --- */
         .toast {
@@ -964,6 +1096,104 @@ function getIcon($name, $size = 20, $class = '') {
 
         .overlay.active { display: block; opacity: 1; }
 
+        /* --- CONFIRM MODAL --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(13, 20, 17, 0.65);
+            backdrop-filter: blur(4px);
+            z-index: 2001;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px var(--shadow-lg);
+        }
+
+        .modal-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .modal-icon svg { width: 32px; height: 32px; }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .modal-message {
+            font-size: 13px;
+            color: var(--text-gray);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .btn-modal-cancel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 11px 24px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .btn-modal-cancel:hover {
+            border-color: var(--text-gray);
+            color: var(--text-primary);
+        }
+
+        .btn-modal-confirm {
+            background: var(--danger);
+            border: 1px solid var(--danger);
+            color: white;
+            padding: 11px 24px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .btn-modal-confirm:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
+
         /* --- RESPONSIVE --- */
         @media (max-width: 1200px) {
             .worker-grid { grid-template-columns: repeat(2, 1fr); }
@@ -983,6 +1213,7 @@ function getIcon($name, $size = 20, $class = '') {
             .filter-bar { flex-direction: column; align-items: stretch; }
             .job-chip { width: 100%; justify-content: center; }
             .sort-select { margin-left: 0; width: 100%; }
+            .btn-clear-all { margin-left: 0; width: 100%; justify-content: center; }
             .results-count { margin-left: 0; text-align: center; margin-top: 8px; }
             .worker-grid { grid-template-columns: 1fr; }
             .stats-bar { grid-template-columns: 1fr; }
@@ -1014,7 +1245,7 @@ function getIcon($name, $size = 20, $class = '') {
     <nav>
         <div class="nav-group">
             <div class="nav-label">Main Menu</div>
-            <a href="#" class="nav-item active">
+            <a href="dashboard.php" class="nav-item">
                 <?php echo getIcon('dashboard', 18); ?> Dashboard
             </a>
             <a href="profile.php" class="nav-item">
@@ -1030,7 +1261,7 @@ function getIcon($name, $size = 20, $class = '') {
 
         <div class="nav-group">
             <div class="nav-label">Preferences</div>
-            <a href="saved-worker.php" class="nav-item">
+            <a href="saved-workers.php" class="nav-item active">
                 <?php echo getIcon('bookmark', 18); ?> Saved Workers
             </a>
             <a href="payment.php" class="nav-item">
@@ -1068,7 +1299,7 @@ function getIcon($name, $size = 20, $class = '') {
             </button>
             <form class="search-bar" method="GET" action="">
                 <?php echo getIcon('search', 18); ?>
-                <input type="text" name="search" placeholder="Search workers..." value="<?php echo $searchQuery; ?>" aria-label="Search workers">
+                <input type="text" name="search" placeholder="Search saved workers..." value="<?php echo $searchQuery; ?>" aria-label="Search saved workers">
                 <button type="submit" style="background:none; border:none; cursor:pointer; color: var(--primary); font-weight: 600; font-size: 13px;">Search</button>
             </form>
         </div>
@@ -1079,7 +1310,7 @@ function getIcon($name, $size = 20, $class = '') {
                 <span id="themeText">Dark</span>
             </button>
             
-            <button class="icon-btn" aria-label="Notifications" onclick="showToast('Notifications', 'You have 3 new messages', true)">
+            <button class="icon-btn" aria-label="Notifications" onclick="showToast('Notifications', 'You have 1 new update', true)">
                 <?php echo getIcon('bell', 18); ?>
                 <span class="notification-dot"></span>
             </button>
@@ -1099,34 +1330,34 @@ function getIcon($name, $size = 20, $class = '') {
 
     <div class="stats-bar">
         <div class="stat-card">
-            <div class="stat-icon green"><?php echo getIcon('workers', 22); ?></div>
+            <div class="stat-icon green"><?php echo getIcon('bookmark', 22); ?></div>
             <div class="stat-info">
-                <h4><?php echo $totalWorkers; ?></h4>
-                <p>Total Workers</p>
+                <h4><?php echo count($savedWorkers); ?></h4>
+                <p>Saved Workers</p>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-icon teal"><?php echo getIcon('check', 22); ?></div>
             <div class="stat-info">
-                <h4><?php echo $availableWorkers; ?></h4>
+                <h4><?php echo count(array_filter($savedWorkers, function($w) { return $w['available'] == 1; })); ?></h4>
                 <p>Available Now</p>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-icon yellow"><?php echo getIcon('star', 22); ?></div>
             <div class="stat-info">
-                <h4><?php echo $avgRating; ?></h4>
+                <h4><?php echo count($savedWorkers) > 0 ? number_format(array_sum(array_column($savedWorkers, 'rating')) / count($savedWorkers), 1) : '0'; ?></h4>
                 <p>Avg Rating</p>
             </div>
         </div>
     </div>
 
     <div class="page-title">
-        <h2>Recommended Professionals</h2>
-        <p>Skilled workers based on your preferences and location.</p>
+        <h2>Saved Workers</h2>
+        <p>Your bookmarked professionals for quick access and booking.</p>
     </div>
 
-    <!-- Filter Bar - Job Filters + Sort on One Line -->
+    <!-- Filter Bar -->
     <form method="GET" action="">
         <input type="hidden" name="search" value="<?php echo $searchQuery; ?>">
         <input type="hidden" name="category" value="<?php echo $categoryFilter; ?>">
@@ -1142,11 +1373,18 @@ function getIcon($name, $size = 20, $class = '') {
             <?php endforeach; ?>
             
             <select class="sort-select" name="sort" onchange="this.form.submit()" aria-label="Sort by">
+                <option value="saved_date" <?php echo $sortFilter === 'saved_date' ? 'selected' : ''; ?>>Recently Saved</option>
                 <option value="rating" <?php echo $sortFilter === 'rating' ? 'selected' : ''; ?>>Highest Rated</option>
                 <option value="price_low" <?php echo $sortFilter === 'price_low' ? 'selected' : ''; ?>>Price: Low-High</option>
                 <option value="price_high" <?php echo $sortFilter === 'price_high' ? 'selected' : ''; ?>>Price: High-Low</option>
                 <option value="reviews" <?php echo $sortFilter === 'reviews' ? 'selected' : ''; ?>>Most Reviews</option>
             </select>
+            
+            <?php if (count($savedWorkers) > 0): ?>
+            <button type="button" class="btn-clear-all" onclick="openClearAllModal()">
+                <?php echo getIcon('trash', 14); ?> Clear All
+            </button>
+            <?php endif; ?>
             
             <span class="results-count">
                 <?php echo count($filteredWorkers); ?> found
@@ -1157,13 +1395,16 @@ function getIcon($name, $size = 20, $class = '') {
     <div class="worker-grid">
         <?php if (empty($filteredWorkers)): ?>
             <div class="empty-state">
-                <div class="empty-state-icon"><?php echo getIcon('search', 55); ?></div>
-                <h3>No professionals found</h3>
-                <p>Try adjusting your search or filter criteria.</p>
+                <div class="empty-state-icon"><?php echo getIcon('bookmark', 55); ?></div>
+                <h3>No Saved Workers</h3>
+                <p>Bookmark workers to save them here for quick access later.</p>
+                <a href="dashboard.php" class="btn-primary">
+                    <?php echo getIcon('workers', 16); ?> Browse Workers
+                </a>
             </div>
         <?php else: ?>
             <?php foreach($filteredWorkers as $worker): ?>
-                <div class="card" data-worker-id="<?php echo md5($worker['name']); ?>">
+                <div class="card" data-worker-id="<?php echo $worker['id']; ?>">
                     <div class="card-photo-wrapper">
                         <img src="<?php echo $worker['photo']; ?>" alt="<?php echo htmlspecialchars($worker['name']); ?>" class="card-photo" onerror="this.src='https://ui-avatars.com/api/<?php echo urlencode($worker['name']); ?>/110/16a34a/ffffff?rounded=true'">
                         
@@ -1172,27 +1413,20 @@ function getIcon($name, $size = 20, $class = '') {
                                 <?php echo $worker['available'] ? getIcon('check', 10) : getIcon('x', 10); ?>
                                 <?php echo $worker['available'] ? 'Available' : 'Busy'; ?>
                             </span>
-                            <button class="bookmark-btn" onclick="toggleBookmark(this, '<?php echo htmlspecialchars($worker['name']); ?>')" aria-label="Save worker">
-                                <?php echo getIcon('bookmark', 16); ?>
-                            </button>
+                            <form method="POST" action="" style="display: inline;">
+                                <input type="hidden" name="worker_id" value="<?php echo $worker['id']; ?>">
+                                <input type="hidden" name="remove_saved" value="1">
+                                <button type="submit" class="bookmark-btn" onclick="return confirm('Remove <?php echo htmlspecialchars($worker['name']); ?> from saved?')" aria-label="Remove from saved">
+                                    <?php echo getIcon('bookmark-fill', 16); ?>
+                                </button>
+                            </form>
                         </div>
                     </div>
                     
                     <div class="card-body">
                         <h4><?php echo htmlspecialchars($worker['name']); ?></h4>
                         <span class="worker-role">
-                            <?php 
-                            $roleIcon = '';
-                            switch($worker['role']) {
-                                case 'Electrician': $roleIcon = 'bolt'; break;
-                                case 'Plumber': $roleIcon = 'drop'; break;
-                                case 'Carpenter': $roleIcon = 'hammer'; break;
-                                case 'Painter': $roleIcon = 'brush'; break;
-                                case 'AC Technician': $roleIcon = 'snowflake'; break;
-                                case 'Mechanic': $roleIcon = 'wrench'; break;
-                            }
-                            echo getIcon($roleIcon, 12);
-                            ?>
+                            <?php echo getIcon(getRoleIcon($worker['role']), 12); ?>
                             <?php echo htmlspecialchars($worker['role']); ?>
                         </span>
                         
@@ -1209,11 +1443,14 @@ function getIcon($name, $size = 20, $class = '') {
                             </span>
                         </div>
                         
+                        <div class="saved-date">
+                            <?php echo getIcon('clock', 10); ?> Saved <?php echo formatSavedDate($worker['saved_date']); ?>
+                        </div>
+                        
                         <div class="card-footer">
-                            <div class="price"><?php echo htmlspecialchars($worker['price']); ?></div>
-                            <button class="btn-hire"
-                                onclick="window.location.href='worker_details.php?id=<?php echo $worker['id']; ?>'">
-                                View <?php echo getIcon('arrow-right', 13); ?>
+                            <div class="price">₹<?php echo number_format($worker['price']); ?>/<span>hr</span></div>
+                            <button class="btn-hire" onclick="window.location.href='worker_details.php?id=<?php echo $worker['id']; ?>'">
+                                Book <?php echo getIcon('arrow-right', 13); ?>
                             </button>
                         </div>
                     </div>
@@ -1222,6 +1459,24 @@ function getIcon($name, $size = 20, $class = '') {
         <?php endif; ?>
     </div>
 </main>
+
+<!-- Clear All Modal -->
+<div class="modal" id="clearAllModal">
+    <div class="modal-content">
+        <div class="modal-icon">
+            <?php echo getIcon('trash', 32); ?>
+        </div>
+        <h3 class="modal-title">Clear All Saved Workers?</h3>
+        <p class="modal-message">Are you sure you want to remove all workers from your saved list? This action cannot be undone.</p>
+        <form method="POST" action="">
+            <input type="hidden" name="clear_all" value="1">
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeClearAllModal()">Keep All</button>
+                <button type="submit" class="btn-modal-confirm">Yes, Clear All</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <div class="toast" id="toast">
     <div class="toast-icon" id="toastIconBox"><?php echo getIcon('check', 17); ?></div>
@@ -1232,7 +1487,6 @@ function getIcon($name, $size = 20, $class = '') {
 </div>
 
 <script>
-
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('overlay');
@@ -1268,14 +1522,14 @@ function getIcon($name, $size = 20, $class = '') {
         }
     })();
 
-    function toggleBookmark(btn, workerName) {
-        btn.classList.toggle('active');
-        const isBookmarked = btn.classList.contains('active');
-        showToast(isBookmarked ? 'Saved' : 'Removed', `${workerName} ${isBookmarked ? 'added to' : 'removed from'} bookmarks`, isBookmarked);
+    function openClearAllModal() {
+        document.getElementById('clearAllModal').classList.add('active');
+        document.getElementById('overlay').classList.add('active');
     }
 
-    function hireWorker(workerName, workerRole) {
-        showToast('Opening Profile', `Viewing ${workerName}'s profile...`, true);
+    function closeClearAllModal() {
+        document.getElementById('clearAllModal').classList.remove('active');
+        document.getElementById('overlay').classList.remove('active');
     }
 
     function showToast(title, message, success = true) {
@@ -1292,17 +1546,30 @@ function getIcon($name, $size = 20, $class = '') {
         setTimeout(() => { toast.classList.remove('show'); }, 3000);
     }
 
+    // Check for remove success message
+    <?php if (isset($_GET['removed']) && $_GET['removed'] == 1): ?>
+    showToast('Removed', 'Worker removed from saved list', false);
+    <?php endif; ?>
+
+    // Check for clear all success message
+    <?php if (isset($_GET['cleared']) && $_GET['cleared'] == 1): ?>
+    showToast('Cleared', 'All saved workers removed', false);
+    <?php endif; ?>
+
     document.addEventListener('click', function(e) {
         const sidebar = document.getElementById('sidebar');
         const toggle = document.querySelector('.mobile-toggle');
-        if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !toggle.contains(e.target) && sidebar.classList.contains('active')) {
+        const modal = document.getElementById('clearAllModal');
+        if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !toggle.contains(e.target) && sidebar.classList.contains('active') && !modal.contains(e.target)) {
             toggleSidebar();
         }
     });
 
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && document.getElementById('sidebar').classList.contains('active')) toggleSidebar();
-        if (e.key === '/' && e.target.tagName !== 'INPUT') { e.preventDefault(); document.querySelector('.search-bar input').focus(); }
+        if (e.key === 'Escape') {
+            if (document.getElementById('sidebar').classList.contains('active')) toggleSidebar();
+            if (document.getElementById('clearAllModal').classList.contains('active')) closeClearAllModal();
+        }
     });
 </script>
 
