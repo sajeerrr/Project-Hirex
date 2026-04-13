@@ -20,94 +20,6 @@ $userName = htmlspecialchars($user['name']);
 $userInitial = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $userName), 0, 1));
 $userInitial = !empty($userInitial) ? $userInitial : 'A';
 
-// Fetch bookings from database
-$bookings = [];
-
-$bookingQuery = "SELECT b.*, w.name as worker_name, w.role as worker_role, w.photo as worker_photo 
-                 FROM bookings b 
-                 LEFT JOIN workers w ON b.worker_id = w.id 
-                 WHERE b.user_id = '$user_id' 
-                 ORDER BY b.booking_date DESC, b.booking_time DESC";
-
-$bookingResult = $conn->query($bookingQuery);
-
-if ($bookingResult && $bookingResult->num_rows > 0) {
-    while($row = $bookingResult->fetch_assoc()) {
-        // Determine status
-        $status = $row['status'];
-        $bookingDate = $row['booking_date'];
-        $bookingTime = $row['booking_time'];
-        $currentDateTime = date('Y-m-d H:i:s');
-        $bookingDateTime = $bookingDate . ' ' . $bookingTime;
-        
-        // Auto-update completed status if booking date/time has passed
-        if ($status === 'pending' || $status === 'confirmed') {
-            if ($bookingDateTime < $currentDateTime) {
-                $status = 'completed';
-            }
-        }
-        
-        // Worker photo logic
-        $workerPhoto = $row['worker_photo'];
-        if (!empty($workerPhoto)) {
-            if (filter_var($workerPhoto, FILTER_VALIDATE_URL)) {
-                $workerPhotoPath = $workerPhoto;
-            } else {
-                $workerPhotoPath = "../assets/images/workers/" . $workerPhoto;
-            }
-        } else {
-            $workerPhotoPath = "https://ui-avatars.com/api/" . urlencode($row['worker_name'] ?? 'W') . "/100/16a34a/ffffff?rounded=true";
-        }
-        
-        $bookings[] = [
-            "id" => $row['id'],
-            "worker_name" => $row['worker_name'] ?? 'Unknown Worker',
-            "worker_role" => $row['worker_role'] ?? 'Service Professional',
-            "worker_photo" => $workerPhotoPath,
-            "booking_date" => $bookingDate,
-            "booking_time" => $bookingTime,
-            "duration" => $row['duration'] ?? 1,
-            "price" => $row['price'] ?? 0,
-            "status" => $status,
-            "address" => $row['address'] ?? '',
-            "phone" => $row['phone'] ?? '',
-            "notes" => $row['notes'] ?? '',
-            "created_at" => $row['created_at'] ?? ''
-        ];
-    }
-}
-
-// Separate upcoming and completed bookings
-$upcomingBookings = array_filter($bookings, function($booking) {
-    $bookingDateTime = $booking['booking_date'] . ' ' . $booking['booking_time'];
-    $currentDateTime = date('Y-m-d H:i:s');
-    return in_array($booking['status'], ['pending', 'confirmed']) && $bookingDateTime >= $currentDateTime;
-});
-
-$completedBookings = array_filter($bookings, function($booking) {
-    $bookingDateTime = $booking['booking_date'] . ' ' . $booking['booking_time'];
-    $currentDateTime = date('Y-m-d H:i:s');
-    return $booking['status'] === 'completed' || $booking['status'] === 'cancelled' || $bookingDateTime < $currentDateTime;
-});
-
-// Calculate stats
-$totalBookings = count($bookings);
-$upcomingCount = count($upcomingBookings);
-$completedCount = count(array_filter($completedBookings, function($b) { return $b['status'] === 'completed'; }));
-$cancelledCount = count(array_filter($completedBookings, function($b) { return $b['status'] === 'cancelled'; }));
-$totalSpent = array_sum(array_column(array_filter($bookings, function($b) { return $b['status'] !== 'cancelled'; }), 'price'));
-
-// Handle cancel booking request
-if (isset($_POST['cancel_booking'])) {
-    $bookingId = intval($_POST['booking_id']);
-    $cancelQuery = "UPDATE bookings SET status='cancelled' WHERE id='$bookingId' AND user_id='$user_id'";
-    if ($conn->query($cancelQuery)) {
-        $cancelSuccess = true;
-        header("Location: bookings.php?cancelled=1");
-        exit;
-    }
-}
-
 // Photo path
 $userPhoto = null;
 if (!empty($user['photo'])) {
@@ -115,6 +27,80 @@ if (!empty($user['photo'])) {
         $userPhoto = $user['photo'];
     } else {
         $userPhoto = '../assets/images/users/' . $user['photo'];
+    }
+}
+
+// FAQ Categories
+$faqCategories = [
+    [
+        "category" => "General",
+        "icon" => "grid",
+        "faqs" => [
+            ["q" => "How do I create an account?", "a" => "Click on 'Sign Up' on the homepage, fill in your details, and verify your email address."],
+            ["q" => "Is HireX free to use?", "a" => "Yes! Creating an account and browsing workers is completely free. You only pay when you hire a worker."],
+            ["q" => "How do I reset my password?", "a" => "Go to the login page, click 'Forgot Password', and follow the instructions sent to your email."],
+        ]
+    ],
+    [
+        "category" => "Booking & Payments",
+        "icon" => "calendar",
+        "faqs" => [
+            ["q" => "How do I book a worker?", "a" => "Search for workers, select one that fits your needs, click 'View Profile', and then 'Book Now'."],
+            ["q" => "What payment methods are accepted?", "a" => "We accept credit/debit cards, UPI, net banking, and digital wallets."],
+            ["q" => "Can I cancel a booking?", "a" => "Yes, you can cancel up to 24 hours before the scheduled time for a full refund."],
+            ["q" => "When will I be charged?", "a" => "You'll be charged after the work is completed and you confirm satisfaction."],
+        ]
+    ],
+    [
+        "category" => "Workers & Services",
+        "icon" => "workers",
+        "faqs" => [
+            ["q" => "Are workers verified?", "a" => "Yes, all workers undergo identity verification and background checks before joining HireX."],
+            ["q" => "How are worker ratings calculated?", "a" => "Ratings are based on customer reviews, completed jobs, and response time."],
+            ["q" => "Can I request a specific worker?", "a" => "Yes! Save your favorite workers and book them directly for future jobs."],
+            ["q" => "What if I'm not satisfied with the service?", "a" => "Contact our support team within 24 hours. We'll investigate and offer a refund or replacement."],
+        ]
+    ],
+    [
+        "category" => "Safety & Security",
+        "icon" => "check",
+        "faqs" => [
+            ["q" => "Is my personal information safe?", "a" => "Yes, we use industry-standard encryption and never share your data with third parties."],
+            ["q" => "What safety measures are in place?", "a" => "All workers are verified, bookings are tracked, and we have 24/7 support for emergencies."],
+            ["q" => "Can I report a worker?", "a" => "Yes, use the 'Report' option on any worker profile or contact support directly."],
+        ]
+    ],
+];
+
+// Contact info
+$supportEmail = "support@hirex.com";
+$supportPhone = "+91 1800-123-4567";
+$supportHours = "24/7";
+
+// Handle ticket submission
+$ticketSubmitted = false;
+$ticketError = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ticket'])) {
+    $subject = htmlspecialchars($_POST['subject'], ENT_QUOTES, 'UTF-8');
+    $category = htmlspecialchars($_POST['category'], ENT_QUOTES, 'UTF-8');
+    $priority = htmlspecialchars($_POST['priority'], ENT_QUOTES, 'UTF-8');
+    $description = htmlspecialchars($_POST['description'], ENT_QUOTES, 'UTF-8');
+    
+    if (empty($subject) || empty($description)) {
+        $ticketError = "Please fill in all required fields.";
+    } else {
+        // Insert ticket into database
+        $stmt = $conn->prepare("INSERT INTO support_tickets (user_id, subject, category, priority, description, status, created_at) VALUES (?, ?, ?, ?, ?, 'open', NOW())");
+        $stmt->bind_param("issss", $user_id, $subject, $category, $priority, $description);
+        
+        if ($stmt->execute()) {
+            $ticketSubmitted = true;
+            $ticketId = $stmt->insert_id;
+        } else {
+            $ticketError = "Failed to submit ticket. Please try again.";
+        }
+        $stmt->close();
     }
 }
 
@@ -151,48 +137,13 @@ function getIcon($name, $size = 20, $class = '') {
         'workers' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
         'arrow-right' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
         'location' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
-        'trash' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
-        'rupee' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5-10"/><path d="M6 13h3"/><path d="M9 13c6.627 0 7.755 5.373 8.5 10H9V13z"/></svg>',
-        'filter' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',
-        'download' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+        'mail' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>',
+        'chevron-down' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+        'alert-circle' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+        'file-text' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+        'send' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
     ];
     return $icons[$name] ?? '';
-}
-
-// Format date helper
-function formatDate($date) {
-    if (empty($date)) return 'N/A';
-    $timestamp = strtotime($date);
-    return date('M d, Y', $timestamp);
-}
-
-// Format time helper
-function formatTime($time) {
-    if (empty($time)) return 'N/A';
-    $timestamp = strtotime($time);
-    return date('g:i A', $timestamp);
-}
-
-// Get status badge class
-function getStatusClass($status) {
-    switch($status) {
-        case 'pending': return 'status-pending';
-        case 'confirmed': return 'status-confirmed';
-        case 'completed': return 'status-completed';
-        case 'cancelled': return 'status-cancelled';
-        default: return 'status-pending';
-    }
-}
-
-// Get status label
-function getStatusLabel($status) {
-    switch($status) {
-        case 'pending': return 'Pending';
-        case 'confirmed': return 'Confirmed';
-        case 'completed': return 'Completed';
-        case 'cancelled': return 'Cancelled';
-        default: return 'Unknown';
-    }
 }
 ?>
 
@@ -201,8 +152,8 @@ function getStatusLabel($status) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="HireX - Manage Your Bookings">
-    <title>My Bookings — HireX</title>
+    <meta name="description" content="HireX - Help Center & Support">
+    <title>Help Center — HireX</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -407,72 +358,6 @@ function getStatusLabel($status) {
 
         .mobile-toggle:hover { background: var(--primary-light); border-color: var(--primary); }
 
-        /* --- STATS BAR --- */
-        .stats-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 26px;
-        }
-
-        .stat-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 13px;
-            padding: 18px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transition: var(--transition);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px var(--shadow);
-            border-color: var(--primary);
-        }
-
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .stat-icon.green { 
-            background: linear-gradient(135deg, var(--mint-100), var(--mint-200)); 
-            color: var(--mint-600);
-        }
-        .stat-icon.teal { 
-            background: linear-gradient(135deg, var(--teal-100), #99f6e4); 
-            color: var(--teal-600);
-        }
-        .stat-icon.yellow { 
-            background: linear-gradient(135deg, #fef3c7, #fde68a); 
-            color: #b45309;
-        }
-        .stat-icon.red { 
-            background: linear-gradient(135deg, #fee2e2, #fecaca); 
-            color: var(--danger);
-        }
-
-        .stat-info h4 {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text-primary);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        .stat-info p {
-            font-size: 11px;
-            color: var(--text-gray);
-            margin-top: 2px;
-            font-weight: 500;
-        }
-
         /* --- HEADER --- */
         header {
             min-height: 70px;
@@ -575,7 +460,7 @@ function getStatusLabel($status) {
 
         .user-pill:hover { border-color: var(--primary); box-shadow: 0 4px 14px var(--shadow); }
 
-         .avatar { width: 36px; height: 36px; background: linear-gradient(135deg, var(--mint-500), var(--teal-500)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: white; overflow: hidden; }
+        .avatar { width: 36px; height: 36px; background: linear-gradient(135deg, var(--mint-500), var(--teal-500)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: white; overflow: hidden; }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .user-name {
             font-size: 13px;
@@ -622,276 +507,537 @@ function getStatusLabel($status) {
             font-size: 13px;
         }
 
-        /* --- TABS --- */
-        .tabs-container {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 24px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 0;
-        }
-
-        .tab-btn {
-            padding: 12px 24px;
-            background: transparent;
-            border: none;
-            border-bottom: 3px solid transparent;
-            color: var(--text-secondary);
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .tab-btn:hover {
-            color: var(--primary);
-            background: var(--primary-light);
-            border-radius: 8px 8px 0 0;
-        }
-
-        .tab-btn.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-            background: var(--primary-light);
-            border-radius: 8px 8px 0 0;
-        }
-
-        .tab-btn svg { width: 16px; height: 16px; }
-
-        .tab-count {
-            background: var(--primary);
-            color: white;
-            font-size: 10px;
-            padding: 2px 7px;
-            border-radius: 10px;
-            font-weight: 700;
-        }
-
-        /* --- BOOKING CARDS --- */
-        .bookings-container {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .booking-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 15px;
-            padding: 20px;
-            display: grid;
-            grid-template-columns: 80px 1fr auto;
-            gap: 20px;
-            align-items: center;
-            transition: var(--transition);
-        }
-
-        .booking-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px var(--shadow);
-            border-color: var(--primary);
-        }
-
-        .booking-worker-photo {
-            width: 80px;
-            height: 80px;
-            border-radius: 12px;
-            object-fit: cover;
-            border: 3px solid var(--mint-100);
-            transition: var(--transition);
-        }
-
-        .booking-card:hover .booking-worker-photo {
-            border-color: var(--primary);
-        }
-
-        .booking-info {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .booking-worker-name {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--text-primary);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        .booking-worker-role {
-            font-size: 12px;
-            color: var(--primary);
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .booking-details {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            margin-top: 4px;
-        }
-
-        .booking-detail {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .booking-detail svg { width: 14px; height: 14px; color: var(--text-gray); }
-
-        .booking-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            align-items: flex-end;
-        }
-
-        .status-badge {
-            padding: 6px 14px;
+        /* --- HELP CENTER SPECIFIC STYLES --- */
+        
+        /* Hero Section */
+        .help-hero {
+            background: linear-gradient(135deg, var(--mint-500), var(--teal-500));
             border-radius: 20px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .status-badge svg { width: 12px; height: 12px; }
-
-        .status-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-confirmed {
-            background: var(--mint-100);
-            color: var(--mint-600);
-        }
-
-        .status-completed {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .status-cancelled {
-            background: #fee2e2;
-            color: var(--danger);
-        }
-
-        .booking-price {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--primary);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        .booking-price span {
-            font-size: 11px;
-            color: var(--text-gray);
-            font-weight: 500;
-        }
-
-        .btn-cancel {
-            background: transparent;
-            border: 1px solid var(--danger);
-            color: var(--danger);
-            padding: 8px 16px;
-            border-radius: 9px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-cancel:hover {
-            background: var(--danger);
-            color: white;
-            transform: scale(1.05);
-        }
-
-        .btn-cancel svg { width: 14px; height: 14px; }
-
-        .btn-view {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            padding: 8px 16px;
-            border-radius: 9px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .btn-view:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        .btn-view svg { width: 14px; height: 14px; }
-
-        .action-buttons {
-            display: flex;
-            gap: 8px;
-        }
-
-        /* --- EMPTY STATE --- */
-        .empty-state {
+            padding: 40px;
+            margin-bottom: 32px;
             text-align: center;
-            padding: 60px 20px;
-            color: var(--text-gray);
-            background: var(--bg-secondary);
-            border-radius: 15px;
-            border: 1px dashed var(--border);
+            color: white;
+            position: relative;
+            overflow: hidden;
         }
 
-        .empty-state-icon { margin-bottom: 18px; opacity: 0.6; }
-        .empty-state-icon svg { width: 55px; height: 55px; margin: 0 auto; }
-        .empty-state h3 { margin: 0 0 8px 0; color: var(--text-primary); font-size: 18px; }
-        .empty-state p { font-size: 13px; margin-bottom: 20px; }
+        .help-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
 
-        .btn-primary {
+        .help-hero h1 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .help-hero p {
+            font-size: 15px;
+            opacity: 0.95;
+            max-width: 500px;
+            margin: 0 auto 24px auto;
+        }
+
+        .help-search {
+            background: white;
+            padding: 8px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            max-width: 550px;
+            margin: 0 auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+
+        .help-search input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 14px 18px;
+            font-size: 15px;
+            color: var(--text-primary);
+            background: transparent;
+        }
+
+        .help-search button {
             background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
             color: white;
             border: none;
-            padding: 11px 24px;
+            padding: 14px 24px;
             border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .help-search button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+
+        /* Quick Links */
+        .quick-links {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .quick-link-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .quick-link-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px var(--shadow-lg);
+            border-color: var(--primary);
+        }
+
+        .quick-link-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px auto;
+        }
+
+        .quick-link-icon.green { background: linear-gradient(135deg, var(--mint-100), var(--mint-200)); color: var(--mint-600); }
+        .quick-link-icon.teal { background: linear-gradient(135deg, var(--teal-100), #99f6e4); color: var(--teal-600); }
+        .quick-link-icon.yellow { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #b45309; }
+        .quick-link-icon.blue { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #2563eb; }
+
+        .quick-link-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .quick-link-card p {
+            font-size: 12px;
+            color: var(--text-gray);
+        }
+
+        /* Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        /* FAQ Section */
+        .section-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .section-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--mint-100), var(--mint-200));
+            color: var(--mint-600);
+        }
+
+        .section-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-primary);
+        }
+
+        /* FAQ Accordion */
+        .faq-category {
+            margin-bottom: 28px;
+        }
+
+        .faq-category-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .faq-category-title svg { width: 18px; height: 18px; }
+
+        .faq-item {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .faq-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .faq-question {
+            width: 100%;
+            padding: 16px 18px;
+            background: transparent;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            transition: var(--transition);
+        }
+
+        .faq-question:hover {
+            background: var(--primary-light);
+        }
+
+        .faq-question.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .faq-question svg {
+            transition: var(--transition);
+        }
+
+        .faq-question.active svg {
+            transform: rotate(180deg);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease;
+        }
+
+        .faq-answer-content {
+            padding: 0 18px 18px 18px;
             font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Contact Info Cards */
+        .contact-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .contact-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: var(--transition);
+        }
+
+        .contact-card:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .contact-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .contact-icon.green { background: linear-gradient(135deg, var(--mint-100), var(--mint-200)); color: var(--mint-600); }
+        .contact-icon.teal { background: linear-gradient(135deg, var(--teal-100), #99f6e4); color: var(--teal-600); }
+        .contact-icon.blue { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #2563eb; }
+
+        .contact-info h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .contact-info p {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .contact-info span {
+            font-size: 11px;
+            color: var(--text-gray);
+        }
+
+        /* Ticket Form */
+        .ticket-form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .form-group label .required {
+            color: var(--danger);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 13px 16px;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--bg);
+            font-family: 'Inter', sans-serif;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 140px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
+            color: white;
+            border: none;
+            padding: 15px 24px;
+            border-radius: 11px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
             font-family: 'Plus Jakarta Sans', sans-serif;
-            display: inline-flex;
+            display: flex;
             align-items: center;
-            gap: 8px;
-            text-decoration: none;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 8px;
         }
 
-        .btn-primary:hover {
+        .btn-submit:hover {
             background: linear-gradient(135deg, var(--primary-hover), var(--mint-500));
-            transform: scale(1.05);
-            box-shadow: 0 5px 18px var(--shadow-lg);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--shadow-lg);
         }
 
-        .btn-primary svg { width: 16px; height: 16px; }
+        .btn-submit svg { width: 18px; height: 18px; }
+
+        /* Success Message */
+        .success-banner {
+            background: linear-gradient(135deg, var(--mint-100), var(--mint-200));
+            border: 1px solid var(--mint-300);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .success-banner-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--success);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .success-banner-content h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--mint-600);
+            margin-bottom: 4px;
+        }
+
+        .success-banner-content p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Error Message */
+        .error-banner {
+            background: linear-gradient(135deg, #fef2f2, #fecaca);
+            border: 1px solid #fca5a5;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .error-banner-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--danger);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .error-banner-content h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--danger);
+            margin-bottom: 4px;
+        }
+
+        .error-banner-content p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Sidebar Info */
+        .help-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .info-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .info-card h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-card h4 svg { width: 20px; height: 20px; color: var(--primary); }
+
+        .info-list {
+            list-style: none;
+        }
+
+        .info-list li {
+            padding: 12px 0;
+            border-bottom: 1px dashed var(--border);
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-list li:last-child {
+            border-bottom: none;
+        }
+
+        .info-list li svg {
+            width: 16px;
+            height: 16px;
+            color: var(--success);
+            flex-shrink: 0;
+        }
+
+        .response-time {
+            background: var(--primary-light);
+            border-radius: 10px;
+            padding: 14px;
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .response-time p {
+            font-size: 12px;
+            color: var(--text-gray);
+            margin-bottom: 6px;
+        }
+
+        .response-time strong {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+        }
 
         /* --- TOAST --- */
         .toast {
@@ -952,110 +1098,14 @@ function getStatusLabel($status) {
 
         .overlay.active { display: block; opacity: 1; }
 
-        /* --- CONFIRM MODAL --- */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(13, 20, 17, 0.65);
-            backdrop-filter: blur(4px);
-            z-index: 2001;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active { display: flex; }
-
-        .modal-content {
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            padding: 32px;
-            max-width: 420px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 20px 60px var(--shadow-lg);
-        }
-
-        .modal-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--danger);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-        }
-
-        .modal-icon svg { width: 32px; height: 32px; }
-
-        .modal-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 8px;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        .modal-message {
-            font-size: 13px;
-            color: var(--text-gray);
-            margin-bottom: 24px;
-            line-height: 1.6;
-        }
-
-        .modal-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
-
-        .btn-modal-cancel {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            padding: 11px 24px;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        .btn-modal-cancel:hover {
-            border-color: var(--text-gray);
-            color: var(--text-primary);
-        }
-
-        .btn-modal-confirm {
-            background: var(--danger);
-            border: 1px solid var(--danger);
-            color: white;
-            padding: 11px 24px;
-            border-radius: 10px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        .btn-modal-confirm:hover {
-            background: #dc2626;
-            transform: scale(1.05);
-        }
-
         /* --- RESPONSIVE --- */
+        @media (max-width: 1200px) {
+            .content-grid { grid-template-columns: 1fr; }
+            .quick-links { grid-template-columns: repeat(2, 1fr); }
+        }
+
         @media (max-width: 1024px) {
             .main-content { padding: 0 26px 26px 26px; }
-            .stats-bar { grid-template-columns: repeat(2, 1fr); }
-            .booking-card { grid-template-columns: 70px 1fr; }
-            .booking-actions { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
         }
 
         @media (max-width: 768px) {
@@ -1065,14 +1115,10 @@ function getStatusLabel($status) {
             .mobile-toggle { display: flex; }
             .header-left { width: 100%; justify-content: space-between; }
             .search-bar { order: 3; width: 100%; max-width: none; margin-top: 13px; }
-            .stats-bar { grid-template-columns: 1fr; }
-            .booking-card { grid-template-columns: 1fr; text-align: center; }
-            .booking-worker-photo { margin: 0 auto; }
-            .booking-details { justify-content: center; }
-            .booking-actions { align-items: center; }
-            .action-buttons { justify-content: center; }
-            .tabs-container { overflow-x: auto; }
-            .tab-btn { white-space: nowrap; }
+            .help-hero { padding: 28px; }
+            .help-hero h1 { font-size: 24px; }
+            .quick-links { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
             .toast { left: 18px; right: 18px; bottom: 18px; min-width: auto; }
             .page-title h2 { font-size: 20px; }
         }
@@ -1080,10 +1126,8 @@ function getStatusLabel($status) {
         @media (max-width: 480px) {
             .user-name { display: none; }
             .theme-toggle span:last-child { display: none; }
-            .stats-bar { gap: 12px; }
-            .stat-card { padding: 15px; }
-            .booking-actions { flex-direction: column; }
-            .action-buttons { width: 100%; justify-content: center; }
+            .help-search { flex-direction: column; gap: 10px; }
+            .help-search button { width: 100%; }
         }
 
         ::-webkit-scrollbar { width: 6px; }
@@ -1111,7 +1155,7 @@ function getStatusLabel($status) {
             <a href="messages.php" class="nav-item">
                 <?php echo getIcon('message', 18); ?> Messages
             </a>
-            <a href="bookings.php" class="nav-item active">
+            <a href="booking.php" class="nav-item">
                 <?php echo getIcon('calendar', 18); ?> My Bookings
             </a>
         </div>
@@ -1131,7 +1175,7 @@ function getStatusLabel($status) {
 
         <div class="nav-group">
             <div class="nav-label">Support</div>
-            <a href="help.php" class="nav-item">
+            <a href="help.php" class="nav-item active">
                 <?php echo getIcon('help', 18); ?> Help Center
             </a>
             <a href="contact.php" class="nav-item">
@@ -1154,9 +1198,9 @@ function getStatusLabel($status) {
             <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Toggle Menu">
                 <?php echo getIcon('menu', 20); ?>
             </button>
-            <form class="search-bar" method="GET" action="">
+            <form class="search-bar" method="GET" action="dashboard.php">
                 <?php echo getIcon('search', 18); ?>
-                <input type="text" name="search" placeholder="Search bookings..." value="" aria-label="Search bookings">
+                <input type="text" name="search" placeholder="Search workers..." aria-label="Search workers">
                 <button type="submit" style="background:none; border:none; cursor:pointer; color: var(--primary); font-weight: 600; font-size: 13px;">Search</button>
             </form>
         </div>
@@ -1167,7 +1211,7 @@ function getStatusLabel($status) {
                 <span id="themeText">Dark</span>
             </button>
             
-            <button class="icon-btn" aria-label="Notifications" onclick="showToast('Notifications', 'You have 2 booking updates', true)">
+            <button class="icon-btn" aria-label="Notifications" onclick="showToast('Notifications', 'You have 3 new messages', true)">
                 <?php echo getIcon('bell', 18); ?>
                 <span class="notification-dot"></span>
             </button>
@@ -1185,209 +1229,257 @@ function getStatusLabel($status) {
         </div>
     </header>
 
-    <div class="stats-bar">
-        <div class="stat-card">
-            <div class="stat-icon green"><?php echo getIcon('calendar', 22); ?></div>
-            <div class="stat-info">
-                <h4><?php echo $totalBookings; ?></h4>
-                <p>Total Bookings</p>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon teal"><?php echo getIcon('clock', 22); ?></div>
-            <div class="stat-info">
-                <h4><?php echo $upcomingCount; ?></h4>
-                <p>Upcoming</p>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon yellow"><?php echo getIcon('check', 22); ?></div>
-            <div class="stat-info">
-                <h4><?php echo $completedCount; ?></h4>
-                <p>Completed</p>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon red"><?php echo getIcon('rupee', 22); ?></div>
-            <div class="stat-info">
-                <h4>₹<?php echo number_format($totalSpent); ?></h4>
-                <p>Total Spent</p>
-            </div>
-        </div>
-    </div>
-
     <div class="page-title">
-        <h2>My Bookings</h2>
-        <p>Manage and track all your service appointments.</p>
+        <h2>Help Center</h2>
+        <p>Find answers to your questions or get in touch with our support team.</p>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs-container">
-        <button class="tab-btn active" onclick="switchTab('upcoming')" id="tab-upcoming">
-            <?php echo getIcon('clock', 16); ?>
-            Upcoming
-            <span class="tab-count"><?php echo $upcomingCount; ?></span>
-        </button>
-        <button class="tab-btn" onclick="switchTab('completed')" id="tab-completed">
-            <?php echo getIcon('check', 16); ?>
-            Completed
-            <span class="tab-count"><?php echo $completedCount + $cancelledCount; ?></span>
-        </button>
-    </div>
-
-    <!-- Upcoming Bookings -->
-    <div class="bookings-container" id="upcoming-bookings">
-        <?php if (empty($upcomingBookings)): ?>
-            <div class="empty-state">
-                <div class="empty-state-icon"><?php echo getIcon('calendar', 55); ?></div>
-                <h3>No Upcoming Bookings</h3>
-                <p>You don't have any upcoming appointments scheduled.</p>
-                <a href="dashboard.php" class="btn-primary">
-                    <?php echo getIcon('workers', 16); ?> Find Workers
-                </a>
-            </div>
-        <?php else: ?>
-            <?php foreach($upcomingBookings as $booking): ?>
-                <div class="booking-card">
-                    <img src="<?php echo $booking['worker_photo']; ?>" alt="<?php echo htmlspecialchars($booking['worker_name']); ?>" class="booking-worker-photo">
-                    
-                    <div class="booking-info">
-                        <div class="booking-worker-name"><?php echo htmlspecialchars($booking['worker_name']); ?></div>
-                        <div class="booking-worker-role"><?php echo htmlspecialchars($booking['worker_role']); ?></div>
-                        
-                        <div class="booking-details">
-                            <div class="booking-detail">
-                                <?php echo getIcon('calendar', 14); ?>
-                                <?php echo formatDate($booking['booking_date']); ?>
-                            </div>
-                            <div class="booking-detail">
-                                <?php echo getIcon('clock', 14); ?>
-                                <?php echo formatTime($booking['booking_time']); ?>
-                            </div>
-                            <div class="booking-detail">
-                                <?php echo getIcon('clock', 14); ?>
-                                <?php echo $booking['duration']; ?> hour(s)
-                            </div>
-                            <?php if (!empty($booking['address'])): ?>
-                            <div class="booking-detail">
-                                <?php echo getIcon('location', 14); ?>
-                                <?php echo htmlspecialchars($booking['address']); ?>
-                            </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    
-                    <div class="booking-actions">
-                        <span class="status-badge <?php echo getStatusClass($booking['status']); ?>">
-                            <?php 
-                            switch($booking['status']) {
-                                case 'pending': echo getIcon('clock', 12); break;
-                                case 'confirmed': echo getIcon('check', 12); break;
-                                default: echo getIcon('clock', 12);
-                            }
-                            ?>
-                            <?php echo getStatusLabel($booking['status']); ?>
-                        </span>
-                        <div class="booking-price">₹<?php echo number_format($booking['price']); ?> <span>total</span></div>
-                        <div class="action-buttons">
-                            <?php if ($booking['status'] !== 'cancelled'): ?>
-                            <button class="btn-cancel" onclick="openCancelModal(<?php echo $booking['id']; ?>, '<?php echo htmlspecialchars($booking['worker_name']); ?>')">
-                                <?php echo getIcon('trash', 14); ?> Cancel
-                            </button>
-                            <?php endif; ?>
-                            <button class="btn-view" onclick="showToast('Contact Worker', 'Calling <?php echo htmlspecialchars($booking['worker_name']); ?>...', true)">
-                                <?php echo getIcon('phone', 14); ?> Contact
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-
-    <!-- Completed Bookings -->
-    <div class="bookings-container" id="completed-bookings" style="display: none;">
-        <?php if (empty($completedBookings)): ?>
-            <div class="empty-state">
-                <div class="empty-state-icon"><?php echo getIcon('check', 55); ?></div>
-                <h3>No Completed Bookings</h3>
-                <p>You haven't completed any service appointments yet.</p>
-                <a href="dashboard.php" class="btn-primary">
-                    <?php echo getIcon('workers', 16); ?> Book a Worker
-                </a>
-            </div>
-        <?php else: ?>
-            <?php foreach($completedBookings as $booking): ?>
-                <div class="booking-card">
-                    <img src="<?php echo $booking['worker_photo']; ?>" alt="<?php echo htmlspecialchars($booking['worker_name']); ?>" class="booking-worker-photo">
-                    
-                    <div class="booking-info">
-                        <div class="booking-worker-name"><?php echo htmlspecialchars($booking['worker_name']); ?></div>
-                        <div class="booking-worker-role"><?php echo htmlspecialchars($booking['worker_role']); ?></div>
-                        
-                        <div class="booking-details">
-                            <div class="booking-detail">
-                                <?php echo getIcon('calendar', 14); ?>
-                                <?php echo formatDate($booking['booking_date']); ?>
-                            </div>
-                            <div class="booking-detail">
-                                <?php echo getIcon('clock', 14); ?>
-                                <?php echo formatTime($booking['booking_time']); ?>
-                            </div>
-                            <div class="booking-detail">
-                                <?php echo getIcon('clock', 14); ?>
-                                <?php echo $booking['duration']; ?> hour(s)
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="booking-actions">
-                        <span class="status-badge <?php echo getStatusClass($booking['status']); ?>">
-                            <?php 
-                            switch($booking['status']) {
-                                case 'completed': echo getIcon('check', 12); break;
-                                case 'cancelled': echo getIcon('x', 12); break;
-                                default: echo getIcon('clock', 12);
-                            }
-                            ?>
-                            <?php echo getStatusLabel($booking['status']); ?>
-                        </span>
-                        <div class="booking-price">₹<?php echo number_format($booking['price']); ?> <span>total</span></div>
-                        <div class="action-buttons">
-                            <?php if ($booking['status'] === 'completed'): ?>
-                            <button class="btn-view" onclick="showToast('Review Submitted', 'Thank you for your feedback!', true)">
-                                <?php echo getIcon('star', 14); ?> Rate
-                            </button>
-                            <?php endif; ?>
-                            <button class="btn-view" onclick="showToast('Invoice Downloaded', 'Booking receipt sent to your email', true)">
-                                <?php echo getIcon('download', 14); ?> Invoice
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-</main>
-
-<!-- Cancel Confirmation Modal -->
-<div class="modal" id="cancelModal">
-    <div class="modal-content">
-        <div class="modal-icon">
-            <?php echo getIcon('trash', 32); ?>
-        </div>
-        <h3 class="modal-title">Cancel Booking?</h3>
-        <p class="modal-message">Are you sure you want to cancel your booking with <strong id="cancelWorkerName"></strong>? This action cannot be undone.</p>
-        <form method="POST" action="">
-            <input type="hidden" name="booking_id" id="cancelBookingId">
-            <input type="hidden" name="cancel_booking" value="1">
-            <div class="modal-actions">
-                <button type="button" class="btn-modal-cancel" onclick="closeCancelModal()">Keep Booking</button>
-                <button type="submit" class="btn-modal-confirm">Yes, Cancel</button>
-            </div>
+    <!-- Hero Section -->
+    <div class="help-hero">
+        <h1>How can we help you?</h1>
+        <p>Search our knowledge base or submit a ticket to get assistance from our support team.</p>
+        <form class="help-search" onsubmit="searchFAQs(event)">
+            <?php echo getIcon('search', 20); ?>
+            <input type="text" id="faqSearch" placeholder="Search for answers (e.g., booking, payment, refund)...">
+            <button type="submit">
+                <?php echo getIcon('search', 18); ?> Search
+            </button>
         </form>
     </div>
-</div>
+
+    <!-- Quick Links -->
+    <div class="quick-links">
+        <a href="#faqs" class="quick-link-card">
+            <div class="quick-link-icon green">
+                <?php echo getIcon('help', 26); ?>
+            </div>
+            <h3>FAQs</h3>
+            <p>Common questions answered</p>
+        </a>
+        <a href="#ticket" class="quick-link-card">
+            <div class="quick-link-icon teal">
+                <?php echo getIcon('file-text', 26); ?>
+            </div>
+            <h3>Submit Ticket</h3>
+            <p>Get personalized help</p>
+        </a>
+        <a href="#contact" class="quick-link-card">
+            <div class="quick-link-icon yellow">
+                <?php echo getIcon('phone', 26); ?>
+            </div>
+            <h3>Contact Us</h3>
+            <p>Call or email support</p>
+        </a>
+        <a href="dashboard.php" class="quick-link-card">
+            <div class="quick-link-icon blue">
+                <?php echo getIcon('dashboard', 26); ?>
+            </div>
+            <h3>My Bookings</h3>
+            <p>View your appointments</p>
+        </a>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="content-grid">
+        <!-- Left Column -->
+        <div class="main-column">
+            <!-- FAQs Section -->
+            <div class="section-card" id="faqs">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <?php echo getIcon('help', 22); ?>
+                    </div>
+                    <h3>Frequently Asked Questions</h3>
+                </div>
+
+                <?php foreach($faqCategories as $category): ?>
+                    <div class="faq-category">
+                        <div class="faq-category-title">
+                            <?php echo getIcon($category['icon'], 18); ?>
+                            <span><?php echo $category['category']; ?></span>
+                        </div>
+                        
+                        <?php foreach($category['faqs'] as $index => $faq): ?>
+                            <div class="faq-item">
+                                <button class="faq-question" onclick="toggleFAQ(this)">
+                                    <span><?php echo $faq['q']; ?></span>
+                                    <?php echo getIcon('chevron-down', 18); ?>
+                                </button>
+                                <div class="faq-answer">
+                                    <div class="faq-answer-content">
+                                        <?php echo $faq['a']; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Ticket Submission Form -->
+            <div class="section-card" id="ticket">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <?php echo getIcon('file-text', 22); ?>
+                    </div>
+                    <h3>Submit a Support Ticket</h3>
+                </div>
+
+                <?php if ($ticketSubmitted): ?>
+                    <div class="success-banner">
+                        <div class="success-banner-icon">
+                            <?php echo getIcon('check', 22); ?>
+                        </div>
+                        <div class="success-banner-content">
+                            <h4>Ticket Submitted Successfully!</h4>
+                            <p>Your ticket ID is #<?php echo $ticketId; ?>. We'll respond within 24 hours.</p>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($ticketError): ?>
+                    <div class="error-banner">
+                        <div class="error-banner-icon">
+                            <?php echo getIcon('alert-circle', 22); ?>
+                        </div>
+                        <div class="error-banner-content">
+                            <h4>Submission Failed</h4>
+                            <p><?php echo $ticketError; ?></p>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <form class="ticket-form" method="POST" action="">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Subject <span class="required">*</span></label>
+                            <input type="text" name="subject" placeholder="Brief summary of your issue" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select name="category">
+                                <option value="general">General Inquiry</option>
+                                <option value="booking">Booking Issue</option>
+                                <option value="payment">Payment Problem</option>
+                                <option value="worker">Worker Related</option>
+                                <option value="account">Account Issue</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Priority</label>
+                            <select name="priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Your Email</label>
+                            <input type="email" name="email" value="<?php echo htmlspecialchars($user['email'] ?? ''); ?>" placeholder="your@email.com">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description <span class="required">*</span></label>
+                        <textarea name="description" placeholder="Describe your issue in detail..." required></textarea>
+                    </div>
+
+                    <button type="submit" name="submit_ticket" class="btn-submit">
+                        <?php echo getIcon('send', 18); ?> Submit Ticket
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column (Sidebar) -->
+        <div class="help-sidebar">
+            <!-- Contact Info -->
+            <div class="info-card" id="contact">
+                <h4><?php echo getIcon('phone', 20); ?> Contact Support</h4>
+                <div class="contact-cards">
+                    <div class="contact-card">
+                        <div class="contact-icon green">
+                            <?php echo getIcon('mail', 22); ?>
+                        </div>
+                        <div class="contact-info">
+                            <h4>Email Us</h4>
+                            <p><?php echo $supportEmail; ?></p>
+                            <span>Response within 24 hours</span>
+                        </div>
+                    </div>
+
+                    <div class="contact-card">
+                        <div class="contact-icon teal">
+                            <?php echo getIcon('phone', 22); ?>
+                        </div>
+                        <div class="contact-info">
+                            <h4>Call Us</h4>
+                            <p><?php echo $supportPhone; ?></p>
+                            <span>Available <?php echo $supportHours; ?></span>
+                        </div>
+                    </div>
+
+                    <div class="contact-card">
+                        <div class="contact-icon blue">
+                            <?php echo getIcon('message', 22); ?>
+                        </div>
+                        <div class="contact-info">
+                            <h4>Live Chat</h4>
+                            <p>Start Chat</p>
+                            <span>Available 9 AM - 9 PM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="response-time">
+                    <p>Average Response Time</p>
+                    <strong>2-4 Hours</strong>
+                </div>
+            </div>
+
+            <!-- Quick Tips -->
+            <div class="info-card">
+                <h4><?php echo getIcon('alert-circle', 20); ?> Quick Tips</h4>
+                <ul class="info-list">
+                    <li>
+                        <?php echo getIcon('check', 16); ?>
+                        Check FAQ before submitting a ticket
+                    </li>
+                    <li>
+                        <?php echo getIcon('check', 16); ?>
+                        Include booking ID for faster resolution
+                    </li>
+                    <li>
+                        <?php echo getIcon('check', 16); ?>
+                        Attach screenshots if applicable
+                    </li>
+                    <li>
+                        <?php echo getIcon('check', 16); ?>
+                        Keep your contact info updated
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Still Need Help -->
+            <div class="info-card" style="background: linear-gradient(135deg, var(--mint-500), var(--teal-500)); border: none;">
+                <h4 style="color: white;">
+                    <?php echo getIcon('help', 20); ?> Still Need Help?
+                </h4>
+                <p style="font-size: 13px; color: rgba(255,255,255,0.9); margin-bottom: 16px;">
+                    Our support team is here to assist you with any questions or concerns.
+                </p>
+                <button onclick="scrollToTicket()" style="width: 100%; background: white; color: var(--mint-600); border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: var(--transition);">
+                    Submit a Ticket
+                </button>
+            </div>
+        </div>
+    </div>
+</main>
 
 <div class="toast" id="toast">
     <div class="toast-icon" id="toastIconBox"><?php echo getIcon('check', 17); ?></div>
@@ -1433,35 +1525,47 @@ function getStatusLabel($status) {
         }
     })();
 
-    function switchTab(tab) {
-        const upcomingTab = document.getElementById('tab-upcoming');
-        const completedTab = document.getElementById('tab-completed');
-        const upcomingBookings = document.getElementById('upcoming-bookings');
-        const completedBookings = document.getElementById('completed-bookings');
+    function toggleFAQ(button) {
+        button.classList.toggle('active');
+        const answer = button.nextElementSibling;
         
-        if (tab === 'upcoming') {
-            upcomingTab.classList.add('active');
-            completedTab.classList.remove('active');
-            upcomingBookings.style.display = 'flex';
-            completedBookings.style.display = 'none';
+        if (button.classList.contains('active')) {
+            answer.style.maxHeight = answer.scrollHeight + 'px';
         } else {
-            completedTab.classList.add('active');
-            upcomingTab.classList.remove('active');
-            upcomingBookings.style.display = 'none';
-            completedBookings.style.display = 'flex';
+            answer.style.maxHeight = '0';
         }
     }
 
-    function openCancelModal(bookingId, workerName) {
-        document.getElementById('cancelBookingId').value = bookingId;
-        document.getElementById('cancelWorkerName').textContent = workerName;
-        document.getElementById('cancelModal').classList.add('active');
-        document.getElementById('overlay').classList.add('active');
+    function searchFAQs(event) {
+        event.preventDefault();
+        const searchTerm = document.getElementById('faqSearch').value.toLowerCase();
+        const faqItems = document.querySelectorAll('.faq-item');
+        
+        faqItems.forEach(item => {
+            const question = item.querySelector('.faq-question span').textContent.toLowerCase();
+            const answer = item.querySelector('.faq-answer-content').textContent.toLowerCase();
+            
+            if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+                item.style.display = 'block';
+                // Auto-expand matching FAQs
+                const button = item.querySelector('.faq-question');
+                const answer = item.querySelector('.faq-answer');
+                if (!button.classList.contains('active')) {
+                    button.classList.add('active');
+                    answer.style.maxHeight = answer.scrollHeight + 'px';
+                }
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        if (searchTerm) {
+            showToast('Search Results', `Found ${document.querySelectorAll('.faq-item[style="display: block;"]').length} matching results`, true);
+        }
     }
 
-    function closeCancelModal() {
-        document.getElementById('cancelModal').classList.remove('active');
-        document.getElementById('overlay').classList.remove('active');
+    function scrollToTicket() {
+        document.getElementById('ticket').scrollIntoView({ behavior: 'smooth' });
     }
 
     function showToast(title, message, success = true) {
@@ -1478,26 +1582,29 @@ function getStatusLabel($status) {
         setTimeout(() => { toast.classList.remove('show'); }, 3000);
     }
 
-    // Check for cancel success message
-    <?php if (isset($_GET['cancelled']) && $_GET['cancelled'] == 1): ?>
-    showToast('Booking Cancelled', 'Your appointment has been cancelled successfully', false);
-    <?php endif; ?>
-
     document.addEventListener('click', function(e) {
         const sidebar = document.getElementById('sidebar');
         const toggle = document.querySelector('.mobile-toggle');
-        const modal = document.getElementById('cancelModal');
-        if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !toggle.contains(e.target) && sidebar.classList.contains('active') && !modal.contains(e.target)) {
+        if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !toggle.contains(e.target) && sidebar.classList.contains('active')) {
             toggleSidebar();
         }
     });
 
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            if (document.getElementById('sidebar').classList.contains('active')) toggleSidebar();
-            if (document.getElementById('cancelModal').classList.contains('active')) closeCancelModal();
-        }
+        if (e.key === 'Escape' && document.getElementById('sidebar').classList.contains('active')) toggleSidebar();
     });
+
+    // Auto-hide success banner after 5 seconds
+    <?php if ($ticketSubmitted): ?>
+    setTimeout(() => {
+        const banner = document.querySelector('.success-banner');
+        if (banner) {
+            banner.style.transition = 'opacity 0.5s';
+            banner.style.opacity = '0';
+            setTimeout(() => banner.remove(), 500);
+        }
+    }, 5000);
+    <?php endif; ?>
 </script>
 
 </body>

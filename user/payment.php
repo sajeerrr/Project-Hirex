@@ -792,7 +792,7 @@ function getIcon($name, $size = 20, $class = '') {
 
         <div class="nav-group">
             <div class="nav-label">Preferences</div>
-            <a href="saved-workers.php" class="nav-item">
+            <a href="saved-worker.php" class="nav-item">
                 <?php echo getIcon('bookmark', 18); ?> Saved Workers
             </a>
             <a href="payment.php" class="nav-item active">
@@ -805,10 +805,10 @@ function getIcon($name, $size = 20, $class = '') {
 
         <div class="nav-group">
             <div class="nav-label">Support</div>
-            <a href="#" class="nav-item">
+            <a href="help.php" class="nav-item">
                 <?php echo getIcon('help', 18); ?> Help Center
             </a>
-            <a href="#" class="nav-item">
+            <a href="contact.php" class="nav-item">
                 <?php echo getIcon('phone', 18); ?> Contact Us
             </a>
         </div>

@@ -444,8 +444,8 @@ function avatarUrl($photo, $name, $type = 'worker') {
         </div>
         <div class="nav-group">
             <div class="nav-label">Support</div>
-            <a href="#" class="nav-item"><?php echo getIcon('help',18); ?> Help Center</a>
-            <a href="#" class="nav-item"><?php echo getIcon('phone',18); ?> Contact Us</a>
+            <a href="help.php" class="nav-item"><?php echo getIcon('help',18); ?> Help Center</a>
+            <a href="contact.php" class="nav-item"><?php echo getIcon('phone',18); ?> Contact Us</a>
         </div>
     </nav>
     <div class="signout-container">
