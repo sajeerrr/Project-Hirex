@@ -5,20 +5,28 @@ include("database/db.php");
 
 if(isset($_POST['register'])){
 
-$name = $_POST['name'];
-$email = $_POST['email'];
-$password = password_hash($_POST['password'], PASSWORD_DEFAULT);
-$city = $_POST['city'];
+    $name     = $conn->real_escape_string($_POST['name']);
+    $email    = $conn->real_escape_string($_POST['email']);
+    $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $location = $conn->real_escape_string($_POST['location']);
+    $phone    = $conn->real_escape_string($_POST['phone']);
 
-$sql = "INSERT INTO users (name,email,password,city)
-VALUES ('$name','$email','$password','$city')";
+    // Check if email already exists
+    $check = $conn->query("SELECT id FROM users WHERE email='$email'");
+    if($check->num_rows > 0){
+        echo "<script>alert('Email already exists');</script>";
+    } else {
 
-$conn->query($sql);
+        $sql = "INSERT INTO users (name,email,password,location,phone,bio,photo)
+                VALUES ('$name','$email','$password','$location','$phone','','')";
 
-echo "<script>alert('Registration Successful');</script>";
-
+        if($conn->query($sql)){
+            echo "<script>alert('Registration Successful'); window.location='login.php';</script>";
+        } else {
+            echo "<script>alert('Error: Try again');</script>";
+        }
+    }
 }
-
 ?>
 
 <section class="register-section">
@@ -53,8 +61,15 @@ required
 
 <input 
 type="text"
-name="city"
-placeholder="City"
+name="location"
+placeholder="City / Location"
+required
+>
+
+<input 
+type="text"
+name="phone"
+placeholder="Phone Number"
 required
 >
 

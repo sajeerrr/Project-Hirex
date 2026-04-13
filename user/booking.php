@@ -20,78 +20,93 @@ $userName = htmlspecialchars($user['name']);
 $userInitial = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $userName), 0, 1));
 $userInitial = !empty($userInitial) ? $userInitial : 'A';
 
+// Fetch bookings from database
+$bookings = [];
 
-// Sample Worker Data with Profile Photos
-$workers = [];
+$bookingQuery = "SELECT b.*, w.name as worker_name, w.role as worker_role, w.photo as worker_photo 
+                 FROM bookings b 
+                 LEFT JOIN workers w ON b.worker_id = w.id 
+                 WHERE b.user_id = '$user_id' 
+                 ORDER BY b.booking_date DESC, b.booking_time DESC";
 
-$sql = "SELECT * FROM workers"; // your table name
-$result = $conn->query($sql);
+$bookingResult = $conn->query($bookingQuery);
 
-if ($result->num_rows > 0) {
-    while($row = $result->fetch_assoc()) {
-
-        // image logic
-        $photo = $row['photo'];
-
-        if (filter_var($photo, FILTER_VALIDATE_URL)) {
-            // If photo is a URL, use it directly
-            $photoPath = $photo;
-        } else {
-            // If photo is a local file
-            $photoPath = "../assets/images/workers/" . $photo;
+if ($bookingResult && $bookingResult->num_rows > 0) {
+    while($row = $bookingResult->fetch_assoc()) {
+        // Determine status
+        $status = $row['status'];
+        $bookingDate = $row['booking_date'];
+        $bookingTime = $row['booking_time'];
+        $currentDateTime = date('Y-m-d H:i:s');
+        $bookingDateTime = $bookingDate . ' ' . $bookingTime;
+        
+        // Auto-update completed status if booking date/time has passed
+        if ($status === 'pending' || $status === 'confirmed') {
+            if ($bookingDateTime < $currentDateTime) {
+                $status = 'completed';
+            }
         }
-
-        $workers[] = [
+        
+        // Worker photo logic
+        $workerPhoto = $row['worker_photo'];
+        if (!empty($workerPhoto)) {
+            if (filter_var($workerPhoto, FILTER_VALIDATE_URL)) {
+                $workerPhotoPath = $workerPhoto;
+            } else {
+                $workerPhotoPath = "../assets/images/workers/" . $workerPhoto;
+            }
+        } else {
+            $workerPhotoPath = "https://ui-avatars.com/api/" . urlencode($row['worker_name'] ?? 'W') . "/100/16a34a/ffffff?rounded=true";
+        }
+        
+        $bookings[] = [
             "id" => $row['id'],
-            "name" => $row['name'],
-            "role" => $row['role'],
-            "rating" => $row['rating'],
-            "price" => "₹" . $row['price'] . "/hr",
-            "reviews" => $row['reviews'],
-            "available" => $row['available'], // 1 or 0
-            "photo" => $photoPath,
-            "experience" => $row['experience'],
-            "jobs" => $row['jobs'],
-            "location" => $row['location']
+            "worker_name" => $row['worker_name'] ?? 'Unknown Worker',
+            "worker_role" => $row['worker_role'] ?? 'Service Professional',
+            "worker_photo" => $workerPhotoPath,
+            "booking_date" => $bookingDate,
+            "booking_time" => $bookingTime,
+            "duration" => $row['duration'] ?? 1,
+            "price" => $row['price'] ?? 0,
+            "status" => $status,
+            "address" => $row['address'] ?? '',
+            "phone" => $row['phone'] ?? '',
+            "notes" => $row['notes'] ?? '',
+            "created_at" => $row['created_at'] ?? ''
         ];
     }
 }
 
-// Job categories with SVG icons
-$jobCategories = [
-    ["id" => "all", "name" => "All", "icon" => "grid"],
-    ["id" => "Electrician", "name" => "Electrician", "icon" => "bolt"],
-    ["id" => "Plumber", "name" => "Plumber", "icon" => "drop"],
-    ["id" => "Carpenter", "name" => "Carpenter", "icon" => "hammer"],
-    ["id" => "Painter", "name" => "Painter", "icon" => "brush"],
-    ["id" => "AC Technician", "name" => "AC Tech", "icon" => "snowflake"],
-    ["id" => "Mechanic", "name" => "Mechanic", "icon" => "wrench"],
-];
-
-// Get filter parameters
-$searchQuery = isset($_GET['search']) ? htmlspecialchars($_GET['search'], ENT_QUOTES, 'UTF-8') : '';
-$categoryFilter = isset($_GET['category']) ? htmlspecialchars($_GET['category'], ENT_QUOTES, 'UTF-8') : 'all';
-$sortFilter = isset($_GET['sort']) ? htmlspecialchars($_GET['sort'], ENT_QUOTES, 'UTF-8') : 'rating';
-
-// Filter workers
-$filteredWorkers = array_filter($workers, function($worker) use ($searchQuery, $categoryFilter) {
-    $matchesSearch = empty($searchQuery) || 
-                     stripos($worker['name'], $searchQuery) !== false || 
-                     stripos($worker['role'], $searchQuery) !== false;
-    $matchesCategory = $categoryFilter === 'all' || $worker['role'] === $categoryFilter;
-    return $matchesSearch && $matchesCategory;
+// Separate upcoming and completed bookings
+$upcomingBookings = array_filter($bookings, function($booking) {
+    $bookingDateTime = $booking['booking_date'] . ' ' . $booking['booking_time'];
+    $currentDateTime = date('Y-m-d H:i:s');
+    return in_array($booking['status'], ['pending', 'confirmed']) && $bookingDateTime >= $currentDateTime;
 });
 
-// Sort workers
-usort($filteredWorkers, function($a, $b) use ($sortFilter) {
-    switch($sortFilter) {
-        case 'rating': return floatval($b['rating']) - floatval($a['rating']);
-        case 'price_low': return intval(preg_replace('/[^0-9]/', '', $a['price'])) - intval(preg_replace('/[^0-9]/', '', $b['price']));
-        case 'price_high': return intval(preg_replace('/[^0-9]/', '', $b['price'])) - intval(preg_replace('/[^0-9]/', '', $a['price']));
-        case 'reviews': return $b['reviews'] - $a['reviews'];
-        default: return 0;
+$completedBookings = array_filter($bookings, function($booking) {
+    $bookingDateTime = $booking['booking_date'] . ' ' . $booking['booking_time'];
+    $currentDateTime = date('Y-m-d H:i:s');
+    return $booking['status'] === 'completed' || $booking['status'] === 'cancelled' || $bookingDateTime < $currentDateTime;
+});
+
+// Calculate stats
+$totalBookings = count($bookings);
+$upcomingCount = count($upcomingBookings);
+$completedCount = count(array_filter($completedBookings, function($b) { return $b['status'] === 'completed'; }));
+$cancelledCount = count(array_filter($completedBookings, function($b) { return $b['status'] === 'cancelled'; }));
+$totalSpent = array_sum(array_column(array_filter($bookings, function($b) { return $b['status'] !== 'cancelled'; }), 'price'));
+
+// Handle cancel booking request
+if (isset($_POST['cancel_booking'])) {
+    $bookingId = intval($_POST['booking_id']);
+    $cancelQuery = "UPDATE bookings SET status='cancelled' WHERE id='$bookingId' AND user_id='$user_id'";
+    if ($conn->query($cancelQuery)) {
+        $cancelSuccess = true;
+        header("Location: bookings.php?cancelled=1");
+        exit;
     }
-});
+}
 
 // Photo path
 $userPhoto = null;
@@ -102,12 +117,6 @@ if (!empty($user['photo'])) {
         $userPhoto = '../assets/images/users/' . $user['photo'];
     }
 }
-
-// Calculate stats
-$totalWorkers = $conn->query("SELECT COUNT(*) as total FROM workers")->fetch_assoc()['total'];
-$availableWorkers = $conn->query("SELECT COUNT(*) as total FROM workers WHERE available=1")->fetch_assoc()['total'];
-$avgRating = $conn->query("SELECT AVG(rating) as avg FROM workers")->fetch_assoc()['avg'];
-$avgRating = $avgRating ? round($avgRating, 1) : 0;
 
 // SVG Icon Function
 function getIcon($name, $size = 20, $class = '') {
@@ -142,8 +151,48 @@ function getIcon($name, $size = 20, $class = '') {
         'workers' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
         'arrow-right' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
         'location' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+        'trash' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>',
+        'rupee' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5-10"/><path d="M6 13h3"/><path d="M9 13c6.627 0 7.755 5.373 8.5 10H9V13z"/></svg>',
+        'filter' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>',
+        'download' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
     ];
     return $icons[$name] ?? '';
+}
+
+// Format date helper
+function formatDate($date) {
+    if (empty($date)) return 'N/A';
+    $timestamp = strtotime($date);
+    return date('M d, Y', $timestamp);
+}
+
+// Format time helper
+function formatTime($time) {
+    if (empty($time)) return 'N/A';
+    $timestamp = strtotime($time);
+    return date('g:i A', $timestamp);
+}
+
+// Get status badge class
+function getStatusClass($status) {
+    switch($status) {
+        case 'pending': return 'status-pending';
+        case 'confirmed': return 'status-confirmed';
+        case 'completed': return 'status-completed';
+        case 'cancelled': return 'status-cancelled';
+        default: return 'status-pending';
+    }
+}
+
+// Get status label
+function getStatusLabel($status) {
+    switch($status) {
+        case 'pending': return 'Pending';
+        case 'confirmed': return 'Confirmed';
+        case 'completed': return 'Completed';
+        case 'cancelled': return 'Cancelled';
+        default: return 'Unknown';
+    }
 }
 ?>
 
@@ -152,8 +201,8 @@ function getIcon($name, $size = 20, $class = '') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="HireX - Find and hire skilled workers easily">
-    <title>Dashboard — HireX</title>
+    <meta name="description" content="HireX - Manage Your Bookings">
+    <title>My Bookings — HireX</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -361,7 +410,7 @@ function getIcon($name, $size = 20, $class = '') {
         /* --- STATS BAR --- */
         .stats-bar {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
             margin-bottom: 26px;
         }
@@ -404,6 +453,10 @@ function getIcon($name, $size = 20, $class = '') {
         .stat-icon.yellow { 
             background: linear-gradient(135deg, #fef3c7, #fde68a); 
             color: #b45309;
+        }
+        .stat-icon.red { 
+            background: linear-gradient(135deg, #fee2e2, #fecaca); 
+            color: var(--danger);
         }
 
         .stat-info h4 {
@@ -569,307 +622,190 @@ function getIcon($name, $size = 20, $class = '') {
             font-size: 13px;
         }
 
-        /* --- FILTER BAR (One Line) --- */
-        .filter-bar {
+        /* --- TABS --- */
+        .tabs-container {
             display: flex;
-            align-items: center;
             gap: 10px;
-            margin: 22px 0 24px 0;
-            flex-wrap: wrap;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0;
         }
 
-        .filter-label {
-            font-size: 12px;
+        .tab-btn {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-secondary);
+            font-size: 13px;
             font-weight: 600;
-            color: var(--text-secondary);
-            margin-right: 6px;
-        }
-
-        .job-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 9px 16px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 26px;
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-secondary);
             cursor: pointer;
             transition: var(--transition);
-            text-decoration: none;
-            white-space: nowrap;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .job-chip:hover {
-            border-color: var(--primary);
-            background: var(--primary-light);
+        .tab-btn:hover {
             color: var(--primary);
-            transform: translateY(-2px);
+            background: var(--primary-light);
+            border-radius: 8px 8px 0 0;
         }
 
-        .job-chip.active {
-            background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: var(--primary-light);
+            border-radius: 8px 8px 0 0;
+        }
+
+        .tab-btn svg { width: 16px; height: 16px; }
+
+        .tab-count {
+            background: var(--primary);
             color: white;
-            border-color: var(--mint-500);
-            box-shadow: 0 4px 14px var(--shadow-lg);
-        }
-
-        .job-chip svg { width: 14px; height: 14px; }
-
-        /* Sort Select - Right Side of Job Filters */
-        .sort-select {
-            padding: 9px 15px;
-            border-radius: 26px;
-            border: 1px solid var(--border);
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            min-width: 165px;
-            transition: var(--transition);
-            font-family: 'Inter', sans-serif;
-            margin-left: auto;
-        }
-
-        .sort-select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
-        }
-
-        .results-count {
-            color: var(--text-gray);
-            font-size: 12px;
-            font-weight: 500;
-            margin-left: 12px;
-        }
-
-        /* --- GRID - 3 Cards Per Row --- */
-        .worker-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
-
-        /* --- CARD --- */
-        .card {
-            background: var(--bg-secondary);
-            border-radius: 15px;
-            border: 1px solid var(--border);
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 2px 10px var(--shadow);
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--mint-500), var(--teal-500));
-            transform: scaleX(0);
-            transition: var(--transition);
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px var(--shadow-lg);
-            border-color: var(--primary);
-        }
-
-        .card:hover::before { transform: scaleX(1); }
-
-        /* Card Photo - Round */
-        .card-photo-wrapper {
-            position: relative;
-            padding: 24px 20px 0 20px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .card-photo {
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid var(--mint-100);
-            transition: var(--transition);
-        }
-
-        .card:hover .card-photo {
-            border-color: var(--primary);
-            transform: scale(1.06);
-        }
-
-        .photo-overlay {
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            right: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            z-index: 10;
-        }
-
-        .availability-badge {
             font-size: 10px;
-            padding: 5px 11px;
-            border-radius: 18px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-
-        .available {
-            background: rgba(34, 197, 94, 0.95);
-            color: white;
-        }
-
-        .busy {
-            background: rgba(239, 68, 68, 0.95);
-            color: white;
-        }
-
-        .availability-badge svg { width: 10px; height: 10px; }
-
-        .bookmark-btn {
-            background: rgba(255,255,255,0.95);
-            border: 1px solid var(--border);
-            width: 34px;
-            height: 34px;
+            padding: 2px 7px;
             border-radius: 10px;
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+            font-weight: 700;
         }
 
-        .bookmark-btn:hover {
-            transform: scale(1.1);
+        /* --- BOOKING CARDS --- */
+        .bookings-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .booking-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            gap: 20px;
+            align-items: center;
+            transition: var(--transition);
+        }
+
+        .booking-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--shadow);
             border-color: var(--primary);
         }
 
-        .bookmark-btn.active {
-            background: var(--danger);
-            border-color: var(--danger);
-            color: white;
+        .booking-worker-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 3px solid var(--mint-100);
+            transition: var(--transition);
         }
 
-        .bookmark-btn svg { width: 16px; height: 16px; }
-
-        /* Card Body */
-        .card-body {
-            padding: 16px;
-            text-align: center;
+        .booking-card:hover .booking-worker-photo {
+            border-color: var(--primary);
         }
 
-        .card h4 {
-            margin: 0 0 6px 0;
+        .booking-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .booking-worker-name {
             font-size: 16px;
             font-weight: 700;
             color: var(--text-primary);
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
 
-        .worker-role {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
+        .booking-worker-role {
+            font-size: 12px;
             color: var(--primary);
-            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            background: var(--mint-50);
-            padding: 4px 10px;
-            border-radius: 13px;
-            margin-bottom: 10px;
         }
 
-        .worker-role svg { width: 12px; height: 12px; }
-
-        .location-info {
-            font-size: 11px;
-            color: var(--text-gray);
+        .booking-details {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 4px;
         }
 
-        .location-info svg { width: 12px; height: 12px; }
-
-        .card-meta {
+        .booking-detail {
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .booking-detail svg { width: 14px; height: 14px; color: var(--text-gray); }
+
+        .booking-actions {
+            display: flex;
+            flex-direction: column;
             gap: 10px;
-            margin-bottom: 12px;
+            align-items: flex-end;
         }
 
-        .rating-badge {
+        .status-badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            background: linear-gradient(135deg, #fef3c7, #fde68a);
-            padding: 5px 10px;
-            border-radius: 14px;
-            font-weight: 700;
+            gap: 5px;
+        }
+
+        .status-badge svg { width: 12px; height: 12px; }
+
+        .status-pending {
+            background: #fef3c7;
             color: #92400e;
-            font-size: 11px;
         }
 
-        .rating-badge svg { width: 12px; height: 12px; fill: currentColor; }
-
-        .meta-item {
-            font-size: 11px;
-            color: var(--text-gray);
-            display: flex;
-            align-items: center;
-            gap: 4px;
+        .status-confirmed {
+            background: var(--mint-100);
+            color: var(--mint-600);
         }
 
-        .meta-item svg { width: 11px; height: 11px; }
-
-        /* Card Footer */
-        .card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 12px;
-            border-top: 1px dashed var(--border);
+        .status-completed {
+            background: #dbeafe;
+            color: #1e40af;
         }
 
-        .price {
+        .status-cancelled {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .booking-price {
+            font-size: 18px;
             font-weight: 700;
-            font-size: 16px;
             color: var(--primary);
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
 
-        .price span {
+        .booking-price span {
             font-size: 11px;
             color: var(--text-gray);
             font-weight: 500;
         }
 
-        .btn-hire {
-            background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
-            color: white;
-            border: none;
-            padding: 9px 18px;
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 8px 16px;
             border-radius: 9px;
             font-size: 12px;
             font-weight: 600;
@@ -878,20 +814,47 @@ function getIcon($name, $size = 20, $class = '') {
             font-family: 'Plus Jakarta Sans', sans-serif;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
         }
 
-        .btn-hire:hover {
-            background: linear-gradient(135deg, var(--primary-hover), var(--mint-500));
+        .btn-cancel:hover {
+            background: var(--danger);
+            color: white;
             transform: scale(1.05);
-            box-shadow: 0 5px 18px var(--shadow-lg);
         }
 
-        .btn-hire svg { width: 13px; height: 13px; }
+        .btn-cancel svg { width: 14px; height: 14px; }
+
+        .btn-view {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 9px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-view:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-view svg { width: 14px; height: 14px; }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+        }
 
         /* --- EMPTY STATE --- */
         .empty-state {
-            grid-column: 1 / -1;
             text-align: center;
             padding: 60px 20px;
             color: var(--text-gray);
@@ -903,7 +866,32 @@ function getIcon($name, $size = 20, $class = '') {
         .empty-state-icon { margin-bottom: 18px; opacity: 0.6; }
         .empty-state-icon svg { width: 55px; height: 55px; margin: 0 auto; }
         .empty-state h3 { margin: 0 0 8px 0; color: var(--text-primary); font-size: 18px; }
-        .empty-state p { font-size: 13px; }
+        .empty-state p { font-size: 13px; margin-bottom: 20px; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
+            color: white;
+            border: none;
+            padding: 11px 24px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--primary-hover), var(--mint-500));
+            transform: scale(1.05);
+            box-shadow: 0 5px 18px var(--shadow-lg);
+        }
+
+        .btn-primary svg { width: 16px; height: 16px; }
 
         /* --- TOAST --- */
         .toast {
@@ -964,13 +952,110 @@ function getIcon($name, $size = 20, $class = '') {
 
         .overlay.active { display: block; opacity: 1; }
 
-        /* --- RESPONSIVE --- */
-        @media (max-width: 1200px) {
-            .worker-grid { grid-template-columns: repeat(2, 1fr); }
+        /* --- CONFIRM MODAL --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(13, 20, 17, 0.65);
+            backdrop-filter: blur(4px);
+            z-index: 2001;
+            align-items: center;
+            justify-content: center;
         }
 
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 32px;
+            max-width: 420px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 60px var(--shadow-lg);
+        }
+
+        .modal-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+
+        .modal-icon svg { width: 32px; height: 32px; }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .modal-message {
+            font-size: 13px;
+            color: var(--text-gray);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .btn-modal-cancel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 11px 24px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .btn-modal-cancel:hover {
+            border-color: var(--text-gray);
+            color: var(--text-primary);
+        }
+
+        .btn-modal-confirm {
+            background: var(--danger);
+            border: 1px solid var(--danger);
+            color: white;
+            padding: 11px 24px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .btn-modal-confirm:hover {
+            background: #dc2626;
+            transform: scale(1.05);
+        }
+
+        /* --- RESPONSIVE --- */
         @media (max-width: 1024px) {
             .main-content { padding: 0 26px 26px 26px; }
+            .stats-bar { grid-template-columns: repeat(2, 1fr); }
+            .booking-card { grid-template-columns: 70px 1fr; }
+            .booking-actions { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
         }
 
         @media (max-width: 768px) {
@@ -980,12 +1065,14 @@ function getIcon($name, $size = 20, $class = '') {
             .mobile-toggle { display: flex; }
             .header-left { width: 100%; justify-content: space-between; }
             .search-bar { order: 3; width: 100%; max-width: none; margin-top: 13px; }
-            .filter-bar { flex-direction: column; align-items: stretch; }
-            .job-chip { width: 100%; justify-content: center; }
-            .sort-select { margin-left: 0; width: 100%; }
-            .results-count { margin-left: 0; text-align: center; margin-top: 8px; }
-            .worker-grid { grid-template-columns: 1fr; }
             .stats-bar { grid-template-columns: 1fr; }
+            .booking-card { grid-template-columns: 1fr; text-align: center; }
+            .booking-worker-photo { margin: 0 auto; }
+            .booking-details { justify-content: center; }
+            .booking-actions { align-items: center; }
+            .action-buttons { justify-content: center; }
+            .tabs-container { overflow-x: auto; }
+            .tab-btn { white-space: nowrap; }
             .toast { left: 18px; right: 18px; bottom: 18px; min-width: auto; }
             .page-title h2 { font-size: 20px; }
         }
@@ -993,9 +1080,10 @@ function getIcon($name, $size = 20, $class = '') {
         @media (max-width: 480px) {
             .user-name { display: none; }
             .theme-toggle span:last-child { display: none; }
-            .job-chip { padding: 7px 13px; font-size: 11px; }
             .stats-bar { gap: 12px; }
             .stat-card { padding: 15px; }
+            .booking-actions { flex-direction: column; }
+            .action-buttons { width: 100%; justify-content: center; }
         }
 
         ::-webkit-scrollbar { width: 6px; }
@@ -1014,7 +1102,7 @@ function getIcon($name, $size = 20, $class = '') {
     <nav>
         <div class="nav-group">
             <div class="nav-label">Main Menu</div>
-            <a href="#" class="nav-item active">
+            <a href="dashboard.php" class="nav-item">
                 <?php echo getIcon('dashboard', 18); ?> Dashboard
             </a>
             <a href="profile.php" class="nav-item">
@@ -1023,7 +1111,7 @@ function getIcon($name, $size = 20, $class = '') {
             <a href="messages.php" class="nav-item">
                 <?php echo getIcon('message', 18); ?> Messages
             </a>
-            <a href="booking.php" class="nav-item">
+            <a href="bookings.php" class="nav-item active">
                 <?php echo getIcon('calendar', 18); ?> My Bookings
             </a>
         </div>
@@ -1068,7 +1156,7 @@ function getIcon($name, $size = 20, $class = '') {
             </button>
             <form class="search-bar" method="GET" action="">
                 <?php echo getIcon('search', 18); ?>
-                <input type="text" name="search" placeholder="Search workers..." value="<?php echo $searchQuery; ?>" aria-label="Search workers">
+                <input type="text" name="search" placeholder="Search bookings..." value="" aria-label="Search bookings">
                 <button type="submit" style="background:none; border:none; cursor:pointer; color: var(--primary); font-weight: 600; font-size: 13px;">Search</button>
             </form>
         </div>
@@ -1079,7 +1167,7 @@ function getIcon($name, $size = 20, $class = '') {
                 <span id="themeText">Dark</span>
             </button>
             
-            <button class="icon-btn" aria-label="Notifications" onclick="showToast('Notifications', 'You have 3 new messages', true)">
+            <button class="icon-btn" aria-label="Notifications" onclick="showToast('Notifications', 'You have 2 booking updates', true)">
                 <?php echo getIcon('bell', 18); ?>
                 <span class="notification-dot"></span>
             </button>
@@ -1099,121 +1187,180 @@ function getIcon($name, $size = 20, $class = '') {
 
     <div class="stats-bar">
         <div class="stat-card">
-            <div class="stat-icon green"><?php echo getIcon('workers', 22); ?></div>
+            <div class="stat-icon green"><?php echo getIcon('calendar', 22); ?></div>
             <div class="stat-info">
-                <h4><?php echo $totalWorkers; ?></h4>
-                <p>Total Workers</p>
+                <h4><?php echo $totalBookings; ?></h4>
+                <p>Total Bookings</p>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon teal"><?php echo getIcon('check', 22); ?></div>
+            <div class="stat-icon teal"><?php echo getIcon('clock', 22); ?></div>
             <div class="stat-info">
-                <h4><?php echo $availableWorkers; ?></h4>
-                <p>Available Now</p>
+                <h4><?php echo $upcomingCount; ?></h4>
+                <p>Upcoming</p>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon yellow"><?php echo getIcon('star', 22); ?></div>
+            <div class="stat-icon yellow"><?php echo getIcon('check', 22); ?></div>
             <div class="stat-info">
-                <h4><?php echo $avgRating; ?></h4>
-                <p>Avg Rating</p>
+                <h4><?php echo $completedCount; ?></h4>
+                <p>Completed</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red"><?php echo getIcon('rupee', 22); ?></div>
+            <div class="stat-info">
+                <h4>₹<?php echo number_format($totalSpent); ?></h4>
+                <p>Total Spent</p>
             </div>
         </div>
     </div>
 
     <div class="page-title">
-        <h2>Recommended Professionals</h2>
-        <p>Skilled workers based on your preferences and location.</p>
+        <h2>My Bookings</h2>
+        <p>Manage and track all your service appointments.</p>
     </div>
 
-    <!-- Filter Bar - Job Filters + Sort on One Line -->
-    <form method="GET" action="">
-        <input type="hidden" name="search" value="<?php echo $searchQuery; ?>">
-        <input type="hidden" name="category" value="<?php echo $categoryFilter; ?>">
-        
-        <div class="filter-bar">
-            <span class="filter-label">Filter:</span>
-            <?php foreach($jobCategories as $job): ?>
-                <a href="?category=<?php echo urlencode($job['id']); ?>&search=<?php echo urlencode($searchQuery); ?>" 
-                   class="job-chip <?php echo $categoryFilter === $job['id'] ? 'active' : ''; ?>">
-                    <?php echo getIcon($job['icon'], 14); ?>
-                    <span><?php echo $job['name']; ?></span>
-                </a>
-            <?php endforeach; ?>
-            
-            <select class="sort-select" name="sort" onchange="this.form.submit()" aria-label="Sort by">
-                <option value="rating" <?php echo $sortFilter === 'rating' ? 'selected' : ''; ?>>Highest Rated</option>
-                <option value="price_low" <?php echo $sortFilter === 'price_low' ? 'selected' : ''; ?>>Price: Low-High</option>
-                <option value="price_high" <?php echo $sortFilter === 'price_high' ? 'selected' : ''; ?>>Price: High-Low</option>
-                <option value="reviews" <?php echo $sortFilter === 'reviews' ? 'selected' : ''; ?>>Most Reviews</option>
-            </select>
-            
-            <span class="results-count">
-                <?php echo count($filteredWorkers); ?> found
-            </span>
-        </div>
-    </form>
+    <!-- Tabs -->
+    <div class="tabs-container">
+        <button class="tab-btn active" onclick="switchTab('upcoming')" id="tab-upcoming">
+            <?php echo getIcon('clock', 16); ?>
+            Upcoming
+            <span class="tab-count"><?php echo $upcomingCount; ?></span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('completed')" id="tab-completed">
+            <?php echo getIcon('check', 16); ?>
+            Completed
+            <span class="tab-count"><?php echo $completedCount + $cancelledCount; ?></span>
+        </button>
+    </div>
 
-    <div class="worker-grid">
-        <?php if (empty($filteredWorkers)): ?>
+    <!-- Upcoming Bookings -->
+    <div class="bookings-container" id="upcoming-bookings">
+        <?php if (empty($upcomingBookings)): ?>
             <div class="empty-state">
-                <div class="empty-state-icon"><?php echo getIcon('search', 55); ?></div>
-                <h3>No professionals found</h3>
-                <p>Try adjusting your search or filter criteria.</p>
+                <div class="empty-state-icon"><?php echo getIcon('calendar', 55); ?></div>
+                <h3>No Upcoming Bookings</h3>
+                <p>You don't have any upcoming appointments scheduled.</p>
+                <a href="dashboard.php" class="btn-primary">
+                    <?php echo getIcon('workers', 16); ?> Find Workers
+                </a>
             </div>
         <?php else: ?>
-            <?php foreach($filteredWorkers as $worker): ?>
-                <div class="card" data-worker-id="<?php echo md5($worker['name']); ?>">
-                    <div class="card-photo-wrapper">
-                        <img src="<?php echo $worker['photo']; ?>" alt="<?php echo htmlspecialchars($worker['name']); ?>" class="card-photo" onerror="this.src='https://ui-avatars.com/api/<?php echo urlencode($worker['name']); ?>/110/16a34a/ffffff?rounded=true'">
+            <?php foreach($upcomingBookings as $booking): ?>
+                <div class="booking-card">
+                    <img src="<?php echo $booking['worker_photo']; ?>" alt="<?php echo htmlspecialchars($booking['worker_name']); ?>" class="booking-worker-photo">
+                    
+                    <div class="booking-info">
+                        <div class="booking-worker-name"><?php echo htmlspecialchars($booking['worker_name']); ?></div>
+                        <div class="booking-worker-role"><?php echo htmlspecialchars($booking['worker_role']); ?></div>
                         
-                        <div class="photo-overlay">
-                            <span class="availability-badge <?php echo $worker['available'] ? 'available' : 'busy'; ?>">
-                                <?php echo $worker['available'] ? getIcon('check', 10) : getIcon('x', 10); ?>
-                                <?php echo $worker['available'] ? 'Available' : 'Busy'; ?>
-                            </span>
-                            <button class="bookmark-btn" onclick="toggleBookmark(this, '<?php echo htmlspecialchars($worker['name']); ?>')" aria-label="Save worker">
-                                <?php echo getIcon('bookmark', 16); ?>
-                            </button>
+                        <div class="booking-details">
+                            <div class="booking-detail">
+                                <?php echo getIcon('calendar', 14); ?>
+                                <?php echo formatDate($booking['booking_date']); ?>
+                            </div>
+                            <div class="booking-detail">
+                                <?php echo getIcon('clock', 14); ?>
+                                <?php echo formatTime($booking['booking_time']); ?>
+                            </div>
+                            <div class="booking-detail">
+                                <?php echo getIcon('clock', 14); ?>
+                                <?php echo $booking['duration']; ?> hour(s)
+                            </div>
+                            <?php if (!empty($booking['address'])): ?>
+                            <div class="booking-detail">
+                                <?php echo getIcon('location', 14); ?>
+                                <?php echo htmlspecialchars($booking['address']); ?>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     
-                    <div class="card-body">
-                        <h4><?php echo htmlspecialchars($worker['name']); ?></h4>
-                        <span class="worker-role">
+                    <div class="booking-actions">
+                        <span class="status-badge <?php echo getStatusClass($booking['status']); ?>">
                             <?php 
-                            $roleIcon = '';
-                            switch($worker['role']) {
-                                case 'Electrician': $roleIcon = 'bolt'; break;
-                                case 'Plumber': $roleIcon = 'drop'; break;
-                                case 'Carpenter': $roleIcon = 'hammer'; break;
-                                case 'Painter': $roleIcon = 'brush'; break;
-                                case 'AC Technician': $roleIcon = 'snowflake'; break;
-                                case 'Mechanic': $roleIcon = 'wrench'; break;
+                            switch($booking['status']) {
+                                case 'pending': echo getIcon('clock', 12); break;
+                                case 'confirmed': echo getIcon('check', 12); break;
+                                default: echo getIcon('clock', 12);
                             }
-                            echo getIcon($roleIcon, 12);
                             ?>
-                            <?php echo htmlspecialchars($worker['role']); ?>
+                            <?php echo getStatusLabel($booking['status']); ?>
                         </span>
-                        
-                        <div class="location-info">
-                            <?php echo getIcon('location', 12); ?> <?php echo htmlspecialchars($worker['location']); ?>
+                        <div class="booking-price">₹<?php echo number_format($booking['price']); ?> <span>total</span></div>
+                        <div class="action-buttons">
+                            <?php if ($booking['status'] !== 'cancelled'): ?>
+                            <button class="btn-cancel" onclick="openCancelModal(<?php echo $booking['id']; ?>, '<?php echo htmlspecialchars($booking['worker_name']); ?>')">
+                                <?php echo getIcon('trash', 14); ?> Cancel
+                            </button>
+                            <?php endif; ?>
+                            <button class="btn-view" onclick="showToast('Contact Worker', 'Calling <?php echo htmlspecialchars($booking['worker_name']); ?>...', true)">
+                                <?php echo getIcon('phone', 14); ?> Contact
+                            </button>
                         </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+
+    <!-- Completed Bookings -->
+    <div class="bookings-container" id="completed-bookings" style="display: none;">
+        <?php if (empty($completedBookings)): ?>
+            <div class="empty-state">
+                <div class="empty-state-icon"><?php echo getIcon('check', 55); ?></div>
+                <h3>No Completed Bookings</h3>
+                <p>You haven't completed any service appointments yet.</p>
+                <a href="dashboard.php" class="btn-primary">
+                    <?php echo getIcon('workers', 16); ?> Book a Worker
+                </a>
+            </div>
+        <?php else: ?>
+            <?php foreach($completedBookings as $booking): ?>
+                <div class="booking-card">
+                    <img src="<?php echo $booking['worker_photo']; ?>" alt="<?php echo htmlspecialchars($booking['worker_name']); ?>" class="booking-worker-photo">
+                    
+                    <div class="booking-info">
+                        <div class="booking-worker-name"><?php echo htmlspecialchars($booking['worker_name']); ?></div>
+                        <div class="booking-worker-role"><?php echo htmlspecialchars($booking['worker_role']); ?></div>
                         
-                        <div class="card-meta">
-                            <span class="rating-badge">
-                                <?php echo getIcon('star', 12); ?> <?php echo $worker['rating']; ?>
-                            </span>
-                            <span class="meta-item">
-                                <?php echo getIcon('briefcase', 11); ?> <?php echo $worker['jobs']; ?> jobs
-                            </span>
+                        <div class="booking-details">
+                            <div class="booking-detail">
+                                <?php echo getIcon('calendar', 14); ?>
+                                <?php echo formatDate($booking['booking_date']); ?>
+                            </div>
+                            <div class="booking-detail">
+                                <?php echo getIcon('clock', 14); ?>
+                                <?php echo formatTime($booking['booking_time']); ?>
+                            </div>
+                            <div class="booking-detail">
+                                <?php echo getIcon('clock', 14); ?>
+                                <?php echo $booking['duration']; ?> hour(s)
+                            </div>
                         </div>
-                        
-                        <div class="card-footer">
-                            <div class="price"><?php echo htmlspecialchars($worker['price']); ?></div>
-                            <button class="btn-hire"
-                                onclick="window.location.href='worker_details.php?id=<?php echo $worker['id']; ?>'">
-                                View <?php echo getIcon('arrow-right', 13); ?>
+                    </div>
+                    
+                    <div class="booking-actions">
+                        <span class="status-badge <?php echo getStatusClass($booking['status']); ?>">
+                            <?php 
+                            switch($booking['status']) {
+                                case 'completed': echo getIcon('check', 12); break;
+                                case 'cancelled': echo getIcon('x', 12); break;
+                                default: echo getIcon('clock', 12);
+                            }
+                            ?>
+                            <?php echo getStatusLabel($booking['status']); ?>
+                        </span>
+                        <div class="booking-price">₹<?php echo number_format($booking['price']); ?> <span>total</span></div>
+                        <div class="action-buttons">
+                            <?php if ($booking['status'] === 'completed'): ?>
+                            <button class="btn-view" onclick="showToast('Review Submitted', 'Thank you for your feedback!', true)">
+                                <?php echo getIcon('star', 14); ?> Rate
+                            </button>
+                            <?php endif; ?>
+                            <button class="btn-view" onclick="showToast('Invoice Downloaded', 'Booking receipt sent to your email', true)">
+                                <?php echo getIcon('download', 14); ?> Invoice
                             </button>
                         </div>
                     </div>
@@ -1222,6 +1369,25 @@ function getIcon($name, $size = 20, $class = '') {
         <?php endif; ?>
     </div>
 </main>
+
+<!-- Cancel Confirmation Modal -->
+<div class="modal" id="cancelModal">
+    <div class="modal-content">
+        <div class="modal-icon">
+            <?php echo getIcon('trash', 32); ?>
+        </div>
+        <h3 class="modal-title">Cancel Booking?</h3>
+        <p class="modal-message">Are you sure you want to cancel your booking with <strong id="cancelWorkerName"></strong>? This action cannot be undone.</p>
+        <form method="POST" action="">
+            <input type="hidden" name="booking_id" id="cancelBookingId">
+            <input type="hidden" name="cancel_booking" value="1">
+            <div class="modal-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeCancelModal()">Keep Booking</button>
+                <button type="submit" class="btn-modal-confirm">Yes, Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <div class="toast" id="toast">
     <div class="toast-icon" id="toastIconBox"><?php echo getIcon('check', 17); ?></div>
@@ -1232,7 +1398,6 @@ function getIcon($name, $size = 20, $class = '') {
 </div>
 
 <script>
-
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('overlay');
@@ -1268,14 +1433,35 @@ function getIcon($name, $size = 20, $class = '') {
         }
     })();
 
-    function toggleBookmark(btn, workerName) {
-        btn.classList.toggle('active');
-        const isBookmarked = btn.classList.contains('active');
-        showToast(isBookmarked ? 'Saved' : 'Removed', `${workerName} ${isBookmarked ? 'added to' : 'removed from'} bookmarks`, isBookmarked);
+    function switchTab(tab) {
+        const upcomingTab = document.getElementById('tab-upcoming');
+        const completedTab = document.getElementById('tab-completed');
+        const upcomingBookings = document.getElementById('upcoming-bookings');
+        const completedBookings = document.getElementById('completed-bookings');
+        
+        if (tab === 'upcoming') {
+            upcomingTab.classList.add('active');
+            completedTab.classList.remove('active');
+            upcomingBookings.style.display = 'flex';
+            completedBookings.style.display = 'none';
+        } else {
+            completedTab.classList.add('active');
+            upcomingTab.classList.remove('active');
+            upcomingBookings.style.display = 'none';
+            completedBookings.style.display = 'flex';
+        }
     }
 
-    function hireWorker(workerName, workerRole) {
-        showToast('Opening Profile', `Viewing ${workerName}'s profile...`, true);
+    function openCancelModal(bookingId, workerName) {
+        document.getElementById('cancelBookingId').value = bookingId;
+        document.getElementById('cancelWorkerName').textContent = workerName;
+        document.getElementById('cancelModal').classList.add('active');
+        document.getElementById('overlay').classList.add('active');
+    }
+
+    function closeCancelModal() {
+        document.getElementById('cancelModal').classList.remove('active');
+        document.getElementById('overlay').classList.remove('active');
     }
 
     function showToast(title, message, success = true) {
@@ -1292,17 +1478,25 @@ function getIcon($name, $size = 20, $class = '') {
         setTimeout(() => { toast.classList.remove('show'); }, 3000);
     }
 
+    // Check for cancel success message
+    <?php if (isset($_GET['cancelled']) && $_GET['cancelled'] == 1): ?>
+    showToast('Booking Cancelled', 'Your appointment has been cancelled successfully', false);
+    <?php endif; ?>
+
     document.addEventListener('click', function(e) {
         const sidebar = document.getElementById('sidebar');
         const toggle = document.querySelector('.mobile-toggle');
-        if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !toggle.contains(e.target) && sidebar.classList.contains('active')) {
+        const modal = document.getElementById('cancelModal');
+        if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !toggle.contains(e.target) && sidebar.classList.contains('active') && !modal.contains(e.target)) {
             toggleSidebar();
         }
     });
 
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && document.getElementById('sidebar').classList.contains('active')) toggleSidebar();
-        if (e.key === '/' && e.target.tagName !== 'INPUT') { e.preventDefault(); document.querySelector('.search-bar input').focus(); }
+        if (e.key === 'Escape') {
+            if (document.getElementById('sidebar').classList.contains('active')) toggleSidebar();
+            if (document.getElementById('cancelModal').classList.contains('active')) closeCancelModal();
+        }
     });
 </script>
 

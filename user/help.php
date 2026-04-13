@@ -20,79 +20,6 @@ $userName = htmlspecialchars($user['name']);
 $userInitial = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $userName), 0, 1));
 $userInitial = !empty($userInitial) ? $userInitial : 'A';
 
-
-// Sample Worker Data with Profile Photos
-$workers = [];
-
-$sql = "SELECT * FROM workers"; // your table name
-$result = $conn->query($sql);
-
-if ($result->num_rows > 0) {
-    while($row = $result->fetch_assoc()) {
-
-        // image logic
-        $photo = $row['photo'];
-
-        if (filter_var($photo, FILTER_VALIDATE_URL)) {
-            // If photo is a URL, use it directly
-            $photoPath = $photo;
-        } else {
-            // If photo is a local file
-            $photoPath = "../assets/images/workers/" . $photo;
-        }
-
-        $workers[] = [
-            "id" => $row['id'],
-            "name" => $row['name'],
-            "role" => $row['role'],
-            "rating" => $row['rating'],
-            "price" => "₹" . $row['price'] . "/hr",
-            "reviews" => $row['reviews'],
-            "available" => $row['available'], // 1 or 0
-            "photo" => $photoPath,
-            "experience" => $row['experience'],
-            "jobs" => $row['jobs'],
-            "location" => $row['location']
-        ];
-    }
-}
-
-// Job categories with SVG icons
-$jobCategories = [
-    ["id" => "all", "name" => "All", "icon" => "grid"],
-    ["id" => "Electrician", "name" => "Electrician", "icon" => "bolt"],
-    ["id" => "Plumber", "name" => "Plumber", "icon" => "drop"],
-    ["id" => "Carpenter", "name" => "Carpenter", "icon" => "hammer"],
-    ["id" => "Painter", "name" => "Painter", "icon" => "brush"],
-    ["id" => "AC Technician", "name" => "AC Tech", "icon" => "snowflake"],
-    ["id" => "Mechanic", "name" => "Mechanic", "icon" => "wrench"],
-];
-
-// Get filter parameters
-$searchQuery = isset($_GET['search']) ? htmlspecialchars($_GET['search'], ENT_QUOTES, 'UTF-8') : '';
-$categoryFilter = isset($_GET['category']) ? htmlspecialchars($_GET['category'], ENT_QUOTES, 'UTF-8') : 'all';
-$sortFilter = isset($_GET['sort']) ? htmlspecialchars($_GET['sort'], ENT_QUOTES, 'UTF-8') : 'rating';
-
-// Filter workers
-$filteredWorkers = array_filter($workers, function($worker) use ($searchQuery, $categoryFilter) {
-    $matchesSearch = empty($searchQuery) || 
-                     stripos($worker['name'], $searchQuery) !== false || 
-                     stripos($worker['role'], $searchQuery) !== false;
-    $matchesCategory = $categoryFilter === 'all' || $worker['role'] === $categoryFilter;
-    return $matchesSearch && $matchesCategory;
-});
-
-// Sort workers
-usort($filteredWorkers, function($a, $b) use ($sortFilter) {
-    switch($sortFilter) {
-        case 'rating': return floatval($b['rating']) - floatval($a['rating']);
-        case 'price_low': return intval(preg_replace('/[^0-9]/', '', $a['price'])) - intval(preg_replace('/[^0-9]/', '', $b['price']));
-        case 'price_high': return intval(preg_replace('/[^0-9]/', '', $b['price'])) - intval(preg_replace('/[^0-9]/', '', $a['price']));
-        case 'reviews': return $b['reviews'] - $a['reviews'];
-        default: return 0;
-    }
-});
-
 // Photo path
 $userPhoto = null;
 if (!empty($user['photo'])) {
@@ -103,11 +30,79 @@ if (!empty($user['photo'])) {
     }
 }
 
-// Calculate stats
-$totalWorkers = $conn->query("SELECT COUNT(*) as total FROM workers")->fetch_assoc()['total'];
-$availableWorkers = $conn->query("SELECT COUNT(*) as total FROM workers WHERE available=1")->fetch_assoc()['total'];
-$avgRating = $conn->query("SELECT AVG(rating) as avg FROM workers")->fetch_assoc()['avg'];
-$avgRating = $avgRating ? round($avgRating, 1) : 0;
+// FAQ Categories
+$faqCategories = [
+    [
+        "category" => "General",
+        "icon" => "grid",
+        "faqs" => [
+            ["q" => "How do I create an account?", "a" => "Click on 'Sign Up' on the homepage, fill in your details, and verify your email address."],
+            ["q" => "Is HireX free to use?", "a" => "Yes! Creating an account and browsing workers is completely free. You only pay when you hire a worker."],
+            ["q" => "How do I reset my password?", "a" => "Go to the login page, click 'Forgot Password', and follow the instructions sent to your email."],
+        ]
+    ],
+    [
+        "category" => "Booking & Payments",
+        "icon" => "calendar",
+        "faqs" => [
+            ["q" => "How do I book a worker?", "a" => "Search for workers, select one that fits your needs, click 'View Profile', and then 'Book Now'."],
+            ["q" => "What payment methods are accepted?", "a" => "We accept credit/debit cards, UPI, net banking, and digital wallets."],
+            ["q" => "Can I cancel a booking?", "a" => "Yes, you can cancel up to 24 hours before the scheduled time for a full refund."],
+            ["q" => "When will I be charged?", "a" => "You'll be charged after the work is completed and you confirm satisfaction."],
+        ]
+    ],
+    [
+        "category" => "Workers & Services",
+        "icon" => "workers",
+        "faqs" => [
+            ["q" => "Are workers verified?", "a" => "Yes, all workers undergo identity verification and background checks before joining HireX."],
+            ["q" => "How are worker ratings calculated?", "a" => "Ratings are based on customer reviews, completed jobs, and response time."],
+            ["q" => "Can I request a specific worker?", "a" => "Yes! Save your favorite workers and book them directly for future jobs."],
+            ["q" => "What if I'm not satisfied with the service?", "a" => "Contact our support team within 24 hours. We'll investigate and offer a refund or replacement."],
+        ]
+    ],
+    [
+        "category" => "Safety & Security",
+        "icon" => "check",
+        "faqs" => [
+            ["q" => "Is my personal information safe?", "a" => "Yes, we use industry-standard encryption and never share your data with third parties."],
+            ["q" => "What safety measures are in place?", "a" => "All workers are verified, bookings are tracked, and we have 24/7 support for emergencies."],
+            ["q" => "Can I report a worker?", "a" => "Yes, use the 'Report' option on any worker profile or contact support directly."],
+        ]
+    ],
+];
+
+// Contact info
+$supportEmail = "support@hirex.com";
+$supportPhone = "+91 1800-123-4567";
+$supportHours = "24/7";
+
+// Handle ticket submission
+$ticketSubmitted = false;
+$ticketError = "";
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_ticket'])) {
+    $subject = htmlspecialchars($_POST['subject'], ENT_QUOTES, 'UTF-8');
+    $category = htmlspecialchars($_POST['category'], ENT_QUOTES, 'UTF-8');
+    $priority = htmlspecialchars($_POST['priority'], ENT_QUOTES, 'UTF-8');
+    $description = htmlspecialchars($_POST['description'], ENT_QUOTES, 'UTF-8');
+    
+    if (empty($subject) || empty($description)) {
+        $ticketError = "Please fill in all required fields.";
+    } else {
+        // Insert ticket into database
+        $stmt = $conn->prepare("INSERT INTO support_tickets (user_id, subject, category, priority, description, status, created_at) VALUES (?, ?, ?, ?, ?, 'open', NOW())");
+        $stmt->bind_param("issss", $user_id, $subject, $category, $priority, $description);
+        
+        if ($stmt->execute()) {
+            $ticketSubmitted = true;
+            $ticketId = $stmt->insert_id;
+        } else {
+            $ticketError = "Failed to submit ticket. Please try again.";
+        }
+        $stmt->close();
+    }
+}
 
 // SVG Icon Function
 function getIcon($name, $size = 20, $class = '') {
@@ -142,6 +137,11 @@ function getIcon($name, $size = 20, $class = '') {
         'workers' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
         'arrow-right' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>',
         'location' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+        'mail' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>',
+        'chevron-down' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+        'alert-circle' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+        'file-text' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+        'send' => '<svg class="'.$class.'" width="'.$size.'" height="'.$size.'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
     ];
     return $icons[$name] ?? '';
 }
@@ -152,8 +152,8 @@ function getIcon($name, $size = 20, $class = '') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="HireX - Find and hire skilled workers easily">
-    <title>Dashboard — HireX</title>
+    <meta name="description" content="HireX - Help Center & Support">
+    <title>Help Center — HireX</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -358,68 +358,6 @@ function getIcon($name, $size = 20, $class = '') {
 
         .mobile-toggle:hover { background: var(--primary-light); border-color: var(--primary); }
 
-        /* --- STATS BAR --- */
-        .stats-bar {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
-            margin-bottom: 26px;
-        }
-
-        .stat-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 13px;
-            padding: 18px 20px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transition: var(--transition);
-        }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px var(--shadow);
-            border-color: var(--primary);
-        }
-
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .stat-icon.green { 
-            background: linear-gradient(135deg, var(--mint-100), var(--mint-200)); 
-            color: var(--mint-600);
-        }
-        .stat-icon.teal { 
-            background: linear-gradient(135deg, var(--teal-100), #99f6e4); 
-            color: var(--teal-600);
-        }
-        .stat-icon.yellow { 
-            background: linear-gradient(135deg, #fef3c7, #fde68a); 
-            color: #b45309;
-        }
-
-        .stat-info h4 {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--text-primary);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        .stat-info p {
-            font-size: 11px;
-            color: var(--text-gray);
-            margin-top: 2px;
-            font-weight: 500;
-        }
-
         /* --- HEADER --- */
         header {
             min-height: 70px;
@@ -522,7 +460,7 @@ function getIcon($name, $size = 20, $class = '') {
 
         .user-pill:hover { border-color: var(--primary); box-shadow: 0 4px 14px var(--shadow); }
 
-         .avatar { width: 36px; height: 36px; background: linear-gradient(135deg, var(--mint-500), var(--teal-500)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: white; overflow: hidden; }
+        .avatar { width: 36px; height: 36px; background: linear-gradient(135deg, var(--mint-500), var(--teal-500)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: white; overflow: hidden; }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .user-name {
             font-size: 13px;
@@ -569,341 +507,537 @@ function getIcon($name, $size = 20, $class = '') {
             font-size: 13px;
         }
 
-        /* --- FILTER BAR (One Line) --- */
-        .filter-bar {
+        /* --- HELP CENTER SPECIFIC STYLES --- */
+        
+        /* Hero Section */
+        .help-hero {
+            background: linear-gradient(135deg, var(--mint-500), var(--teal-500));
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 32px;
+            text-align: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .help-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+
+        .help-hero h1 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .help-hero p {
+            font-size: 15px;
+            opacity: 0.95;
+            max-width: 500px;
+            margin: 0 auto 24px auto;
+        }
+
+        .help-search {
+            background: white;
+            padding: 8px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin: 22px 0 24px 0;
-            flex-wrap: wrap;
+            max-width: 550px;
+            margin: 0 auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
         }
 
-        .filter-label {
-            font-size: 12px;
+        .help-search input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 14px 18px;
+            font-size: 15px;
+            color: var(--text-primary);
+            background: transparent;
+        }
+
+        .help-search button {
+            background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 10px;
+            font-size: 14px;
             font-weight: 600;
-            color: var(--text-secondary);
-            margin-right: 6px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .job-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 9px 16px;
+        .help-search button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+
+        /* Quick Links */
+        .quick-links {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .quick-link-card {
             background: var(--bg-secondary);
             border: 1px solid var(--border);
-            border-radius: 26px;
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-secondary);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
             cursor: pointer;
             transition: var(--transition);
             text-decoration: none;
-            white-space: nowrap;
-        }
-
-        .job-chip:hover {
-            border-color: var(--primary);
-            background: var(--primary-light);
-            color: var(--primary);
-            transform: translateY(-2px);
-        }
-
-        .job-chip.active {
-            background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
-            color: white;
-            border-color: var(--mint-500);
-            box-shadow: 0 4px 14px var(--shadow-lg);
-        }
-
-        .job-chip svg { width: 14px; height: 14px; }
-
-        /* Sort Select - Right Side of Job Filters */
-        .sort-select {
-            padding: 9px 15px;
-            border-radius: 26px;
-            border: 1px solid var(--border);
-            background: var(--bg-secondary);
             color: var(--text-primary);
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            min-width: 165px;
-            transition: var(--transition);
-            font-family: 'Inter', sans-serif;
-            margin-left: auto;
         }
 
-        .sort-select:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
-        }
-
-        .results-count {
-            color: var(--text-gray);
-            font-size: 12px;
-            font-weight: 500;
-            margin-left: 12px;
-        }
-
-        /* --- GRID - 3 Cards Per Row --- */
-        .worker-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
-
-        /* --- CARD --- */
-        .card {
-            background: var(--bg-secondary);
-            border-radius: 15px;
-            border: 1px solid var(--border);
-            transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 2px 10px var(--shadow);
-        }
-
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--mint-500), var(--teal-500));
-            transform: scaleX(0);
-            transition: var(--transition);
-        }
-
-        .card:hover {
+        .quick-link-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 15px 40px var(--shadow-lg);
             border-color: var(--primary);
         }
 
-        .card:hover::before { transform: scaleX(1); }
-
-        /* Card Photo - Round */
-        .card-photo-wrapper {
-            position: relative;
-            padding: 24px 20px 0 20px;
+        .quick-link-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
             display: flex;
+            align-items: center;
             justify-content: center;
+            margin: 0 auto 16px auto;
         }
 
-        .card-photo {
-            width: 110px;
-            height: 110px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid var(--mint-100);
-            transition: var(--transition);
-        }
+        .quick-link-icon.green { background: linear-gradient(135deg, var(--mint-100), var(--mint-200)); color: var(--mint-600); }
+        .quick-link-icon.teal { background: linear-gradient(135deg, var(--teal-100), #99f6e4); color: var(--teal-600); }
+        .quick-link-icon.yellow { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #b45309; }
+        .quick-link-icon.blue { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #2563eb; }
 
-        .card:hover .card-photo {
-            border-color: var(--primary);
-            transform: scale(1.06);
-        }
-
-        .photo-overlay {
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            right: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            z-index: 10;
-        }
-
-        .availability-badge {
-            font-size: 10px;
-            padding: 5px 11px;
-            border-radius: 18px;
+        .quick-link-card h3 {
+            font-size: 15px;
             font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-
-        .available {
-            background: rgba(34, 197, 94, 0.95);
-            color: white;
-        }
-
-        .busy {
-            background: rgba(239, 68, 68, 0.95);
-            color: white;
-        }
-
-        .availability-badge svg { width: 10px; height: 10px; }
-
-        .bookmark-btn {
-            background: rgba(255,255,255,0.95);
-            border: 1px solid var(--border);
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.12);
-        }
-
-        .bookmark-btn:hover {
-            transform: scale(1.1);
-            border-color: var(--primary);
-        }
-
-        .bookmark-btn.active {
-            background: var(--danger);
-            border-color: var(--danger);
-            color: white;
-        }
-
-        .bookmark-btn svg { width: 16px; height: 16px; }
-
-        /* Card Body */
-        .card-body {
-            padding: 16px;
-            text-align: center;
-        }
-
-        .card h4 {
-            margin: 0 0 6px 0;
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--text-primary);
+            margin-bottom: 6px;
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
 
-        .worker-role {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            color: var(--primary);
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            background: var(--mint-50);
-            padding: 4px 10px;
-            border-radius: 13px;
-            margin-bottom: 10px;
+        .quick-link-card p {
+            font-size: 12px;
+            color: var(--text-gray);
         }
 
-        .worker-role svg { width: 12px; height: 12px; }
+        /* Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
 
-        .location-info {
-            font-size: 11px;
-            color: var(--text-gray);
+        /* FAQ Section */
+        .section-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .section-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
-            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--mint-100), var(--mint-200));
+            color: var(--mint-600);
         }
 
-        .location-info svg { width: 12px; height: 12px; }
+        .section-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-primary);
+        }
 
-        .card-meta {
+        /* FAQ Accordion */
+        .faq-category {
+            margin-bottom: 28px;
+        }
+
+        .faq-category-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .faq-category-title svg { width: 18px; height: 18px; }
+
+        .faq-item {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .faq-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 4px 15px var(--shadow);
+        }
+
+        .faq-question {
+            width: 100%;
+            padding: 16px 18px;
+            background: transparent;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            transition: var(--transition);
+        }
+
+        .faq-question:hover {
+            background: var(--primary-light);
+        }
+
+        .faq-question.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .faq-question svg {
+            transition: var(--transition);
+        }
+
+        .faq-question.active svg {
+            transform: rotate(180deg);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease;
+        }
+
+        .faq-answer-content {
+            padding: 0 18px 18px 18px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* Contact Info Cards */
+        .contact-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .contact-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: var(--transition);
+        }
+
+        .contact-card:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .contact-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .contact-icon.green { background: linear-gradient(135deg, var(--mint-100), var(--mint-200)); color: var(--mint-600); }
+        .contact-icon.teal { background: linear-gradient(135deg, var(--teal-100), #99f6e4); color: var(--teal-600); }
+        .contact-icon.blue { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #2563eb; }
+
+        .contact-info h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .contact-info p {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .contact-info span {
+            font-size: 11px;
+            color: var(--text-gray);
+        }
+
+        /* Ticket Form */
+        .ticket-form {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .form-group label .required {
+            color: var(--danger);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 13px 16px;
+            border: 1px solid var(--border);
+            border-radius: 11px;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: var(--bg);
+            font-family: 'Inter', sans-serif;
+            transition: var(--transition);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.12);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 140px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
+            color: white;
+            border: none;
+            padding: 15px 24px;
+            border-radius: 11px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: 'Plus Jakarta Sans', sans-serif;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            margin-bottom: 12px;
+            margin-top: 8px;
         }
 
-        .rating-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            background: linear-gradient(135deg, #fef3c7, #fde68a);
-            padding: 5px 10px;
-            border-radius: 14px;
-            font-weight: 700;
-            color: #92400e;
-            font-size: 11px;
-        }
-
-        .rating-badge svg { width: 12px; height: 12px; fill: currentColor; }
-
-        .meta-item {
-            font-size: 11px;
-            color: var(--text-gray);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .meta-item svg { width: 11px; height: 11px; }
-
-        /* Card Footer */
-        .card-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-top: 12px;
-            border-top: 1px dashed var(--border);
-        }
-
-        .price {
-            font-weight: 700;
-            font-size: 16px;
-            color: var(--primary);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        .price span {
-            font-size: 11px;
-            color: var(--text-gray);
-            font-weight: 500;
-        }
-
-        .btn-hire {
-            background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
-            color: white;
-            border: none;
-            padding: 9px 18px;
-            border-radius: 9px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: var(--transition);
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .btn-hire:hover {
+        .btn-submit:hover {
             background: linear-gradient(135deg, var(--primary-hover), var(--mint-500));
-            transform: scale(1.05);
-            box-shadow: 0 5px 18px var(--shadow-lg);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--shadow-lg);
         }
 
-        .btn-hire svg { width: 13px; height: 13px; }
+        .btn-submit svg { width: 18px; height: 18px; }
 
-        /* --- EMPTY STATE --- */
-        .empty-state {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 60px 20px;
-            color: var(--text-gray);
+        /* Success Message */
+        .success-banner {
+            background: linear-gradient(135deg, var(--mint-100), var(--mint-200));
+            border: 1px solid var(--mint-300);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .success-banner-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--success);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .success-banner-content h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--mint-600);
+            margin-bottom: 4px;
+        }
+
+        .success-banner-content p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Error Message */
+        .error-banner {
+            background: linear-gradient(135deg, #fef2f2, #fecaca);
+            border: 1px solid #fca5a5;
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .error-banner-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--danger);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .error-banner-content h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--danger);
+            margin-bottom: 4px;
+        }
+
+        .error-banner-content p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Sidebar Info */
+        .help-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .info-card {
             background: var(--bg-secondary);
-            border-radius: 15px;
-            border: 1px dashed var(--border);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
         }
 
-        .empty-state-icon { margin-bottom: 18px; opacity: 0.6; }
-        .empty-state-icon svg { width: 55px; height: 55px; margin: 0 auto; }
-        .empty-state h3 { margin: 0 0 8px 0; color: var(--text-primary); font-size: 18px; }
-        .empty-state p { font-size: 13px; }
+        .info-card h4 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-card h4 svg { width: 20px; height: 20px; color: var(--primary); }
+
+        .info-list {
+            list-style: none;
+        }
+
+        .info-list li {
+            padding: 12px 0;
+            border-bottom: 1px dashed var(--border);
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .info-list li:last-child {
+            border-bottom: none;
+        }
+
+        .info-list li svg {
+            width: 16px;
+            height: 16px;
+            color: var(--success);
+            flex-shrink: 0;
+        }
+
+        .response-time {
+            background: var(--primary-light);
+            border-radius: 10px;
+            padding: 14px;
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .response-time p {
+            font-size: 12px;
+            color: var(--text-gray);
+            margin-bottom: 6px;
+        }
+
+        .response-time strong {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+        }
 
         /* --- TOAST --- */
         .toast {
@@ -966,7 +1100,8 @@ function getIcon($name, $size = 20, $class = '') {
 
         /* --- RESPONSIVE --- */
         @media (max-width: 1200px) {
-            .worker-grid { grid-template-columns: repeat(2, 1fr); }
+            .content-grid { grid-template-columns: 1fr; }
+            .quick-links { grid-template-columns: repeat(2, 1fr); }
         }
 
         @media (max-width: 1024px) {
@@ -980,12 +1115,10 @@ function getIcon($name, $size = 20, $class = '') {
             .mobile-toggle { display: flex; }
             .header-left { width: 100%; justify-content: space-between; }
             .search-bar { order: 3; width: 100%; max-width: none; margin-top: 13px; }
-            .filter-bar { flex-direction: column; align-items: stretch; }
-            .job-chip { width: 100%; justify-content: center; }
-            .sort-select { margin-left: 0; width: 100%; }
-            .results-count { margin-left: 0; text-align: center; margin-top: 8px; }
-            .worker-grid { grid-template-columns: 1fr; }
-            .stats-bar { grid-template-columns: 1fr; }
+            .help-hero { padding: 28px; }
+            .help-hero h1 { font-size: 24px; }
+            .quick-links { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
             .toast { left: 18px; right: 18px; bottom: 18px; min-width: auto; }
             .page-title h2 { font-size: 20px; }
         }
@@ -993,9 +1126,8 @@ function getIcon($name, $size = 20, $class = '') {
         @media (max-width: 480px) {
             .user-name { display: none; }
             .theme-toggle span:last-child { display: none; }
-            .job-chip { padding: 7px 13px; font-size: 11px; }
-            .stats-bar { gap: 12px; }
-            .stat-card { padding: 15px; }
+            .help-search { flex-direction: column; gap: 10px; }
+            .help-search button { width: 100%; }
         }
 
         ::-webkit-scrollbar { width: 6px; }
@@ -1014,7 +1146,7 @@ function getIcon($name, $size = 20, $class = '') {
     <nav>
         <div class="nav-group">
             <div class="nav-label">Main Menu</div>
-            <a href="#" class="nav-item active">
+            <a href="dashboard.php" class="nav-item">
                 <?php echo getIcon('dashboard', 18); ?> Dashboard
             </a>
             <a href="profile.php" class="nav-item">
@@ -1043,7 +1175,7 @@ function getIcon($name, $size = 20, $class = '') {
 
         <div class="nav-group">
             <div class="nav-label">Support</div>
-            <a href="help.php" class="nav-item">
+            <a href="help.php" class="nav-item active">
                 <?php echo getIcon('help', 18); ?> Help Center
             </a>
             <a href="contact.php" class="nav-item">
@@ -1066,9 +1198,9 @@ function getIcon($name, $size = 20, $class = '') {
             <button class="mobile-toggle" onclick="toggleSidebar()" aria-label="Toggle Menu">
                 <?php echo getIcon('menu', 20); ?>
             </button>
-            <form class="search-bar" method="GET" action="">
+            <form class="search-bar" method="GET" action="dashboard.php">
                 <?php echo getIcon('search', 18); ?>
-                <input type="text" name="search" placeholder="Search workers..." value="<?php echo $searchQuery; ?>" aria-label="Search workers">
+                <input type="text" name="search" placeholder="Search workers..." aria-label="Search workers">
                 <button type="submit" style="background:none; border:none; cursor:pointer; color: var(--primary); font-weight: 600; font-size: 13px;">Search</button>
             </form>
         </div>
@@ -1097,129 +1229,255 @@ function getIcon($name, $size = 20, $class = '') {
         </div>
     </header>
 
-    <div class="stats-bar">
-        <div class="stat-card">
-            <div class="stat-icon green"><?php echo getIcon('workers', 22); ?></div>
-            <div class="stat-info">
-                <h4><?php echo $totalWorkers; ?></h4>
-                <p>Total Workers</p>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon teal"><?php echo getIcon('check', 22); ?></div>
-            <div class="stat-info">
-                <h4><?php echo $availableWorkers; ?></h4>
-                <p>Available Now</p>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon yellow"><?php echo getIcon('star', 22); ?></div>
-            <div class="stat-info">
-                <h4><?php echo $avgRating; ?></h4>
-                <p>Avg Rating</p>
-            </div>
-        </div>
-    </div>
-
     <div class="page-title">
-        <h2>Recommended Professionals</h2>
-        <p>Skilled workers based on your preferences and location.</p>
+        <h2>Help Center</h2>
+        <p>Find answers to your questions or get in touch with our support team.</p>
     </div>
 
-    <!-- Filter Bar - Job Filters + Sort on One Line -->
-    <form method="GET" action="">
-        <input type="hidden" name="search" value="<?php echo $searchQuery; ?>">
-        <input type="hidden" name="category" value="<?php echo $categoryFilter; ?>">
-        
-        <div class="filter-bar">
-            <span class="filter-label">Filter:</span>
-            <?php foreach($jobCategories as $job): ?>
-                <a href="?category=<?php echo urlencode($job['id']); ?>&search=<?php echo urlencode($searchQuery); ?>" 
-                   class="job-chip <?php echo $categoryFilter === $job['id'] ? 'active' : ''; ?>">
-                    <?php echo getIcon($job['icon'], 14); ?>
-                    <span><?php echo $job['name']; ?></span>
-                </a>
-            <?php endforeach; ?>
-            
-            <select class="sort-select" name="sort" onchange="this.form.submit()" aria-label="Sort by">
-                <option value="rating" <?php echo $sortFilter === 'rating' ? 'selected' : ''; ?>>Highest Rated</option>
-                <option value="price_low" <?php echo $sortFilter === 'price_low' ? 'selected' : ''; ?>>Price: Low-High</option>
-                <option value="price_high" <?php echo $sortFilter === 'price_high' ? 'selected' : ''; ?>>Price: High-Low</option>
-                <option value="reviews" <?php echo $sortFilter === 'reviews' ? 'selected' : ''; ?>>Most Reviews</option>
-            </select>
-            
-            <span class="results-count">
-                <?php echo count($filteredWorkers); ?> found
-            </span>
-        </div>
-    </form>
+    <!-- Hero Section -->
+    <div class="help-hero">
+        <h1>How can we help you?</h1>
+        <p>Search our knowledge base or submit a ticket to get assistance from our support team.</p>
+        <form class="help-search" onsubmit="searchFAQs(event)">
+            <?php echo getIcon('search', 20); ?>
+            <input type="text" id="faqSearch" placeholder="Search for answers (e.g., booking, payment, refund)...">
+            <button type="submit">
+                <?php echo getIcon('search', 18); ?> Search
+            </button>
+        </form>
+    </div>
 
-    <div class="worker-grid">
-        <?php if (empty($filteredWorkers)): ?>
-            <div class="empty-state">
-                <div class="empty-state-icon"><?php echo getIcon('search', 55); ?></div>
-                <h3>No professionals found</h3>
-                <p>Try adjusting your search or filter criteria.</p>
+    <!-- Quick Links -->
+    <div class="quick-links">
+        <a href="#faqs" class="quick-link-card">
+            <div class="quick-link-icon green">
+                <?php echo getIcon('help', 26); ?>
             </div>
-        <?php else: ?>
-            <?php foreach($filteredWorkers as $worker): ?>
-                <div class="card" data-worker-id="<?php echo md5($worker['name']); ?>">
-                    <div class="card-photo-wrapper">
-                        <img src="<?php echo $worker['photo']; ?>" alt="<?php echo htmlspecialchars($worker['name']); ?>" class="card-photo" onerror="this.src='https://ui-avatars.com/api/<?php echo urlencode($worker['name']); ?>/110/16a34a/ffffff?rounded=true'">
+            <h3>FAQs</h3>
+            <p>Common questions answered</p>
+        </a>
+        <a href="#ticket" class="quick-link-card">
+            <div class="quick-link-icon teal">
+                <?php echo getIcon('file-text', 26); ?>
+            </div>
+            <h3>Submit Ticket</h3>
+            <p>Get personalized help</p>
+        </a>
+        <a href="#contact" class="quick-link-card">
+            <div class="quick-link-icon yellow">
+                <?php echo getIcon('phone', 26); ?>
+            </div>
+            <h3>Contact Us</h3>
+            <p>Call or email support</p>
+        </a>
+        <a href="dashboard.php" class="quick-link-card">
+            <div class="quick-link-icon blue">
+                <?php echo getIcon('dashboard', 26); ?>
+            </div>
+            <h3>My Bookings</h3>
+            <p>View your appointments</p>
+        </a>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="content-grid">
+        <!-- Left Column -->
+        <div class="main-column">
+            <!-- FAQs Section -->
+            <div class="section-card" id="faqs">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <?php echo getIcon('help', 22); ?>
+                    </div>
+                    <h3>Frequently Asked Questions</h3>
+                </div>
+
+                <?php foreach($faqCategories as $category): ?>
+                    <div class="faq-category">
+                        <div class="faq-category-title">
+                            <?php echo getIcon($category['icon'], 18); ?>
+                            <span><?php echo $category['category']; ?></span>
+                        </div>
                         
-                        <div class="photo-overlay">
-                            <span class="availability-badge <?php echo $worker['available'] ? 'available' : 'busy'; ?>">
-                                <?php echo $worker['available'] ? getIcon('check', 10) : getIcon('x', 10); ?>
-                                <?php echo $worker['available'] ? 'Available' : 'Busy'; ?>
-                            </span>
-                            <button class="bookmark-btn" onclick="toggleBookmark(this, '<?php echo htmlspecialchars($worker['name']); ?>')" aria-label="Save worker">
-                                <?php echo getIcon('bookmark', 16); ?>
-                            </button>
+                        <?php foreach($category['faqs'] as $index => $faq): ?>
+                            <div class="faq-item">
+                                <button class="faq-question" onclick="toggleFAQ(this)">
+                                    <span><?php echo $faq['q']; ?></span>
+                                    <?php echo getIcon('chevron-down', 18); ?>
+                                </button>
+                                <div class="faq-answer">
+                                    <div class="faq-answer-content">
+                                        <?php echo $faq['a']; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <!-- Ticket Submission Form -->
+            <div class="section-card" id="ticket">
+                <div class="section-header">
+                    <div class="section-icon">
+                        <?php echo getIcon('file-text', 22); ?>
+                    </div>
+                    <h3>Submit a Support Ticket</h3>
+                </div>
+
+                <?php if ($ticketSubmitted): ?>
+                    <div class="success-banner">
+                        <div class="success-banner-icon">
+                            <?php echo getIcon('check', 22); ?>
+                        </div>
+                        <div class="success-banner-content">
+                            <h4>Ticket Submitted Successfully!</h4>
+                            <p>Your ticket ID is #<?php echo $ticketId; ?>. We'll respond within 24 hours.</p>
                         </div>
                     </div>
-                    
-                    <div class="card-body">
-                        <h4><?php echo htmlspecialchars($worker['name']); ?></h4>
-                        <span class="worker-role">
-                            <?php 
-                            $roleIcon = '';
-                            switch($worker['role']) {
-                                case 'Electrician': $roleIcon = 'bolt'; break;
-                                case 'Plumber': $roleIcon = 'drop'; break;
-                                case 'Carpenter': $roleIcon = 'hammer'; break;
-                                case 'Painter': $roleIcon = 'brush'; break;
-                                case 'AC Technician': $roleIcon = 'snowflake'; break;
-                                case 'Mechanic': $roleIcon = 'wrench'; break;
-                            }
-                            echo getIcon($roleIcon, 12);
-                            ?>
-                            <?php echo htmlspecialchars($worker['role']); ?>
-                        </span>
-                        
-                        <div class="location-info">
-                            <?php echo getIcon('location', 12); ?> <?php echo htmlspecialchars($worker['location']); ?>
+                <?php endif; ?>
+
+                <?php if ($ticketError): ?>
+                    <div class="error-banner">
+                        <div class="error-banner-icon">
+                            <?php echo getIcon('alert-circle', 22); ?>
                         </div>
-                        
-                        <div class="card-meta">
-                            <span class="rating-badge">
-                                <?php echo getIcon('star', 12); ?> <?php echo $worker['rating']; ?>
-                            </span>
-                            <span class="meta-item">
-                                <?php echo getIcon('briefcase', 11); ?> <?php echo $worker['jobs']; ?> jobs
-                            </span>
+                        <div class="error-banner-content">
+                            <h4>Submission Failed</h4>
+                            <p><?php echo $ticketError; ?></p>
                         </div>
-                        
-                        <div class="card-footer">
-                            <div class="price"><?php echo htmlspecialchars($worker['price']); ?></div>
-                            <button class="btn-hire"
-                                onclick="window.location.href='worker_details.php?id=<?php echo $worker['id']; ?>'">
-                                View <?php echo getIcon('arrow-right', 13); ?>
-                            </button>
+                    </div>
+                <?php endif; ?>
+
+                <form class="ticket-form" method="POST" action="">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Subject <span class="required">*</span></label>
+                            <input type="text" name="subject" placeholder="Brief summary of your issue" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select name="category">
+                                <option value="general">General Inquiry</option>
+                                <option value="booking">Booking Issue</option>
+                                <option value="payment">Payment Problem</option>
+                                <option value="worker">Worker Related</option>
+                                <option value="account">Account Issue</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Priority</label>
+                            <select name="priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Your Email</label>
+                            <input type="email" name="email" value="<?php echo htmlspecialchars($user['email'] ?? ''); ?>" placeholder="your@email.com">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description <span class="required">*</span></label>
+                        <textarea name="description" placeholder="Describe your issue in detail..." required></textarea>
+                    </div>
+
+                    <button type="submit" name="submit_ticket" class="btn-submit">
+                        <?php echo getIcon('send', 18); ?> Submit Ticket
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right Column (Sidebar) -->
+        <div class="help-sidebar">
+            <!-- Contact Info -->
+            <div class="info-card" id="contact">
+                <h4><?php echo getIcon('phone', 20); ?> Contact Support</h4>
+                <div class="contact-cards">
+                    <div class="contact-card">
+                        <div class="contact-icon green">
+                            <?php echo getIcon('mail', 22); ?>
+                        </div>
+                        <div class="contact-info">
+                            <h4>Email Us</h4>
+                            <p><?php echo $supportEmail; ?></p>
+                            <span>Response within 24 hours</span>
+                        </div>
+                    </div>
+
+                    <div class="contact-card">
+                        <div class="contact-icon teal">
+                            <?php echo getIcon('phone', 22); ?>
+                        </div>
+                        <div class="contact-info">
+                            <h4>Call Us</h4>
+                            <p><?php echo $supportPhone; ?></p>
+                            <span>Available <?php echo $supportHours; ?></span>
+                        </div>
+                    </div>
+
+                    <div class="contact-card">
+                        <div class="contact-icon blue">
+                            <?php echo getIcon('message', 22); ?>
+                        </div>
+                        <div class="contact-info">
+                            <h4>Live Chat</h4>
+                            <p>Start Chat</p>
+                            <span>Available 9 AM - 9 PM</span>
                         </div>
                     </div>
                 </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
+
+                <div class="response-time">
+                    <p>Average Response Time</p>
+                    <strong>2-4 Hours</strong>
+                </div>
+            </div>
+
+            <!-- Quick Tips -->
+            <div class="info-card">
+                <h4><?php echo getIcon('alert-circle', 20); ?> Quick Tips</h4>
+                <ul class="info-list">
+                    <li>
+                        <?php echo getIcon('check', 16); ?>
+                        Check FAQ before submitting a ticket
+                    </li>
+                    <li>
+                        <?php echo getIcon('check', 16); ?>
+                        Include booking ID for faster resolution
+                    </li>
+                    <li>
+                        <?php echo getIcon('check', 16); ?>
+                        Attach screenshots if applicable
+                    </li>
+                    <li>
+                        <?php echo getIcon('check', 16); ?>
+                        Keep your contact info updated
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Still Need Help -->
+            <div class="info-card" style="background: linear-gradient(135deg, var(--mint-500), var(--teal-500)); border: none;">
+                <h4 style="color: white;">
+                    <?php echo getIcon('help', 20); ?> Still Need Help?
+                </h4>
+                <p style="font-size: 13px; color: rgba(255,255,255,0.9); margin-bottom: 16px;">
+                    Our support team is here to assist you with any questions or concerns.
+                </p>
+                <button onclick="scrollToTicket()" style="width: 100%; background: white; color: var(--mint-600); border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: var(--transition);">
+                    Submit a Ticket
+                </button>
+            </div>
+        </div>
     </div>
 </main>
 
@@ -1232,7 +1490,6 @@ function getIcon($name, $size = 20, $class = '') {
 </div>
 
 <script>
-
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('overlay');
@@ -1268,14 +1525,47 @@ function getIcon($name, $size = 20, $class = '') {
         }
     })();
 
-    function toggleBookmark(btn, workerName) {
-        btn.classList.toggle('active');
-        const isBookmarked = btn.classList.contains('active');
-        showToast(isBookmarked ? 'Saved' : 'Removed', `${workerName} ${isBookmarked ? 'added to' : 'removed from'} bookmarks`, isBookmarked);
+    function toggleFAQ(button) {
+        button.classList.toggle('active');
+        const answer = button.nextElementSibling;
+        
+        if (button.classList.contains('active')) {
+            answer.style.maxHeight = answer.scrollHeight + 'px';
+        } else {
+            answer.style.maxHeight = '0';
+        }
     }
 
-    function hireWorker(workerName, workerRole) {
-        showToast('Opening Profile', `Viewing ${workerName}'s profile...`, true);
+    function searchFAQs(event) {
+        event.preventDefault();
+        const searchTerm = document.getElementById('faqSearch').value.toLowerCase();
+        const faqItems = document.querySelectorAll('.faq-item');
+        
+        faqItems.forEach(item => {
+            const question = item.querySelector('.faq-question span').textContent.toLowerCase();
+            const answer = item.querySelector('.faq-answer-content').textContent.toLowerCase();
+            
+            if (question.includes(searchTerm) || answer.includes(searchTerm)) {
+                item.style.display = 'block';
+                // Auto-expand matching FAQs
+                const button = item.querySelector('.faq-question');
+                const answer = item.querySelector('.faq-answer');
+                if (!button.classList.contains('active')) {
+                    button.classList.add('active');
+                    answer.style.maxHeight = answer.scrollHeight + 'px';
+                }
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        if (searchTerm) {
+            showToast('Search Results', `Found ${document.querySelectorAll('.faq-item[style="display: block;"]').length} matching results`, true);
+        }
+    }
+
+    function scrollToTicket() {
+        document.getElementById('ticket').scrollIntoView({ behavior: 'smooth' });
     }
 
     function showToast(title, message, success = true) {
@@ -1302,8 +1592,19 @@ function getIcon($name, $size = 20, $class = '') {
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape' && document.getElementById('sidebar').classList.contains('active')) toggleSidebar();
-        if (e.key === '/' && e.target.tagName !== 'INPUT') { e.preventDefault(); document.querySelector('.search-bar input').focus(); }
     });
+
+    // Auto-hide success banner after 5 seconds
+    <?php if ($ticketSubmitted): ?>
+    setTimeout(() => {
+        const banner = document.querySelector('.success-banner');
+        if (banner) {
+            banner.style.transition = 'opacity 0.5s';
+            banner.style.opacity = '0';
+            setTimeout(() => banner.remove(), 500);
+        }
+    }, 5000);
+    <?php endif; ?>
 </script>
 
 </body>
