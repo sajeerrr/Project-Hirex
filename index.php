@@ -92,6 +92,7 @@
         padding-left:10px;
         }
 
+        /* top-line adjust */
         #features,
         #categories {
             scroll-margin-top: 80px;
@@ -120,6 +121,7 @@
             text-decoration: none;
             display: flex;
             align-items: center;
+            margin-left: 35px;
         }
 
         .logo .x {
@@ -330,11 +332,15 @@
             outline: none;
             padding: 14px 18px;
             font-size: 15px;
-            color: var(--text-primary);
+            color: var(--text-gray);
             background: transparent;
             font-family: 'Inter', sans-serif;
             cursor: pointer;
             min-width: 160px;
+        }
+
+        .search-select:valid {
+            color: var(--text-primary); /* selected value color */
         }
 
         .search-select option {
@@ -914,13 +920,13 @@
             Hire trusted electricians, plumbers, carpenters and technicians instantly
         </p>
         
-        <form class="search-bar" action="dashboard.php" method="GET">
-            <input class="search-field" type="text" name="search" placeholder="Service (Electrician, Plumber)">
+        <form class="search-bar" action="login.php">
+            <input class="search-field" type="text" name="search" placeholder="Service (Electrician, Plumber)" required>
             
             <div class="divider"></div>
             
-            <select class="search-select" name="experience">
-                <option value="">Experience</option>
+            <select class="search-select" name="experience" required>
+                <option value="" disabled selected hidden>Experience</option>
                 <option value="1">1+ Years</option>
                 <option value="3">3+ Years</option>
                 <option value="5">5+ Years</option>
@@ -928,7 +934,7 @@
             
             <div class="divider"></div>
             
-            <input class="search-field" type="text" name="location" placeholder="Enter City">
+            <input class="search-field" type="text" name="location" placeholder="Enter City" required>
             
             <button class="search-btn" type="submit">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1034,7 +1040,7 @@
         </div>
         
         <div class="categories-grid">
-            <a href="dashboard.php?category=Electrician" class="category-card">
+            <a href="#dashboard.php?category=Electrician" class="category-card">
                 <div class="category-icon" style="background: linear-gradient(135deg, #fef3c7, #fde68a);">
                     ⚡
                 </div>
@@ -1042,7 +1048,7 @@
                 <span>120+ Professionals</span>
             </a>
             
-            <a href="dashboard.php?category=Plumber" class="category-card">
+            <a href="#dashboard.php?category=Plumber" class="category-card">
                 <div class="category-icon" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">
                     💧
                 </div>
@@ -1050,7 +1056,7 @@
                 <span>95+ Professionals</span>
             </a>
             
-            <a href="dashboard.php?category=Carpenter" class="category-card">
+            <a href="#dashboard.php?category=Carpenter" class="category-card">
                 <div class="category-icon" style="background: linear-gradient(135deg, #fed7aa, #fdba74);">
                     🪚
                 </div>
@@ -1058,7 +1064,7 @@
                 <span>80+ Professionals</span>
             </a>
             
-            <a href="dashboard.php?category=Painter" class="category-card">
+            <a href="#dashboard.php?category=Painter" class="category-card">
                 <div class="category-icon" style="background: linear-gradient(135deg, #e9d5ff, #d8b4fe);">
                     🖌️
                 </div>
@@ -1066,7 +1072,7 @@
                 <span>65+ Professionals</span>
             </a>
             
-            <a href="dashboard.php?category=AC Technician" class="category-card">
+            <a href="#dashboard.php?category=AC Technician" class="category-card">
                 <div class="category-icon" style="background: linear-gradient(135deg, #ccfbf1, #99f6e4);">
                     ❄️
                 </div>
@@ -1074,7 +1080,7 @@
                 <span>55+ Professionals</span>
             </a>
             
-            <a href="dashboard.php?category=Mechanic" class="category-card">
+            <a href="#dashboard.php?category=Mechanic" class="category-card">
                 <div class="category-icon" style="background: linear-gradient(135deg, #fecaca, #fca5a5);">
                     🔧
                 </div>
@@ -1082,7 +1088,7 @@
                 <span>70+ Professionals</span>
             </a>
             
-            <a href="dashboard.php?category=Cleaner" class="category-card">
+            <a href="#dashboard.php?category=Cleaner" class="category-card">
                 <div class="category-icon" style="background: linear-gradient(135deg, #ddd6fe, #c4b5fd);">
                     🧹
                 </div>
@@ -1090,7 +1096,7 @@
                 <span>90+ Professionals</span>
             </a>
             
-            <a href="dashboard.php?category=Appliance Repair" class="category-card">
+            <a href="#dashboard.php?category=Appliance Repair" class="category-card">
                 <div class="category-icon" style="background: linear-gradient(135deg, #fde68a, #fcd34d);">
                     🔌
                 </div>
@@ -1136,7 +1142,7 @@
                     <polyline points="12 5 19 12 12 19"/>
                 </svg>
             </a>
-            <a href="contact.php" class="btn btn-outline">
+            <a href="#contact.php" class="btn btn-outline">
                 Contact Support
             </a>
         </div>
@@ -1174,40 +1180,40 @@
             <div class="footer-column">
                 <h4>Company</h4>
                 <ul>
-                    <li><a href="about.php">About Us</a></li>
-                    <li><a href="careers.php">Careers</a></li>
-                    <li><a href="blog.php">Blog</a></li>
-                    <li><a href="press.php">Press</a></li>
+                    <li><a href="#about.php">About Us</a></li>
+                    <li><a href="#careers.php">Careers</a></li>
+                    <li><a href="#blog.php">Blog</a></li>
+                    <li><a href="#press.php">Press</a></li>
                 </ul>
             </div>
             
             <div class="footer-column">
                 <h4>Support</h4>
                 <ul>
-                    <li><a href="help.php">Help Center</a></li>
-                    <li><a href="contact.php">Contact Us</a></li>
-                    <li><a href="faq.php">FAQ</a></li>
-                    <li><a href="status.php">Service Status</a></li>
+                    <li><a href="#help.php">Help Center</a></li>
+                    <li><a href="#contact.php">Contact Us</a></li>
+                    <li><a href="#faq.php">FAQ</a></li>
+                    <li><a href="#status.php">Service Status</a></li>
                 </ul>
             </div>
             
             <div class="footer-column">
                 <h4>Legal</h4>
                 <ul>
-                    <li><a href="terms.php">Terms of Service</a></li>
-                    <li><a href="privacy.php">Privacy Policy</a></li>
-                    <li><a href="cookies.php">Cookie Policy</a></li>
-                    <li><a href="security.php">Security</a></li>
+                    <li><a href="#terms.php">Terms of Service</a></li>
+                    <li><a href="#privacy.php">Privacy Policy</a></li>
+                    <li><a href="#cookies.php">Cookie Policy</a></li>
+                    <li><a href="#security.php">Security</a></li>
                 </ul>
             </div>
         </div>
         
         <div class="footer-bottom">
-            <p>&copy; 2024 HireX. All rights reserved.</p>
+            <p>&copy; 2026 HireX. All rights reserved.</p>
             <div class="footer-links">
-                <a href="terms.php">Terms</a>
-                <a href="privacy.php">Privacy</a>
-                <a href="cookies.php">Cookies</a>
+                <a href="#terms.php">Terms</a>
+                <a href="#privacy.php">Privacy</a>
+                <a href="#cookies.php">Cookies</a>
             </div>
         </div>
     </div>
