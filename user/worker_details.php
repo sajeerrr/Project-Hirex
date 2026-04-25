@@ -412,20 +412,20 @@ function stars($rating) {
         <div class="nav-group">
             <div class="nav-label">Main Menu</div>
             <a href="dashboard.php" class="nav-item active"><?php echo getIcon('dashboard',18); ?> Dashboard</a>
-            <a href="user-profile.php" class="nav-item"><?php echo getIcon('user',18); ?> My Profile</a>
+            <a href="profile.php" class="nav-item"><?php echo getIcon('user',18); ?> My Profile</a>
             <a href="messages.php" class="nav-item"><?php echo getIcon('message',18); ?> Messages <span class="badge">3</span></a>
-            <a href="#" class="nav-item"><?php echo getIcon('calendar',18); ?> My Bookings</a>
+            <a href="booking.php" class="nav-item"><?php echo getIcon('calendar',18); ?> My Bookings</a>
         </div>
         <div class="nav-group">
             <div class="nav-label">Preferences</div>
-            <a href="#" class="nav-item"><?php echo getIcon('bookmark',18); ?> Saved Workers</a>
-            <a href="#" class="nav-item"><?php echo getIcon('card',18); ?> Payments</a>
-            <a href="#" class="nav-item"><?php echo getIcon('settings',18); ?> Settings</a>
+            <a href="saved-worker.php" class="nav-item"><?php echo getIcon('bookmark',18); ?> Saved Workers</a>
+            <a href="payment.php" class="nav-item"><?php echo getIcon('card',18); ?> Payments</a>
+            <a href="settings.php" class="nav-item"><?php echo getIcon('settings',18); ?> Settings</a>
         </div>
         <div class="nav-group">
             <div class="nav-label">Support</div>
-            <a href="#" class="nav-item"><?php echo getIcon('help',18); ?> Help Center</a>
-            <a href="#" class="nav-item"><?php echo getIcon('phone',18); ?> Contact Us</a>
+            <a href="help.php" class="nav-item"><?php echo getIcon('help',18); ?> Help Center</a>
+            <a href="contact.php" class="nav-item"><?php echo getIcon('phone',18); ?> Contact Us</a>
         </div>
     </nav>
     <div class="signout-container">
