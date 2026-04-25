@@ -267,6 +267,18 @@ function stars($rating) {
         .no-reviews svg{margin:0 auto 10px;opacity:0.35;}
         .no-reviews p{font-size:13px;}
 
+        /* Review Form */
+        .write-review-section{margin-top:20px;padding-top:20px;border-top:1px solid var(--border);}
+        .write-review-section h4{font-size:14px;font-family:'Plus Jakarta Sans',sans-serif;margin-bottom:12px;color:var(--text-primary);}
+        .review-form textarea{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text-primary);font-family:'Inter',sans-serif;min-height:80px;resize:vertical;margin-bottom:12px;outline:none;transition:var(--transition);}
+        .review-form textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(22,163,74,0.12);}
+        .btn-submit-review{background:var(--primary);color:white;border:none;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:var(--transition);}
+        .btn-submit-review:hover{background:var(--primary-hover);}
+        .star-rating{display:flex;gap:4px;margin-bottom:12px;cursor:pointer;}
+        .star-select{color:#f59e0b;transition:var(--transition);}
+        .star-select.empty{color:#d1e8dd;}
+        [data-theme="dark"] .star-select.empty{color:#2d3d33;}
+
         /* ── RIGHT COLUMN (sticky booking card) ── */
         .right-col{position:sticky;top:24px;display:flex;flex-direction:column;gap:16px;}
 
@@ -570,12 +582,27 @@ function stars($rating) {
                                 </div>
                                 <div class="review-stars"><?php echo stars($r['rating'] ?? 5); ?></div>
                             </div>
-                            <?php if (!empty($r['review'])): ?>
-                            <p class="review-text"><?php echo htmlspecialchars($r['review']); ?></p>
+                            <?php if (!empty($r['comment'])): ?>
+                            <p class="review-text"><?php echo htmlspecialchars($r['comment']); ?></p>
                             <?php endif; ?>
                         </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
+
+                    <div class="write-review-section">
+                        <h4>Write a Review</h4>
+                        <form id="reviewForm" class="review-form">
+                            <input type="hidden" name="worker_id" value="<?php echo $worker_id; ?>">
+                            <div class="star-rating" id="starRating">
+                                <input type="hidden" name="rating" id="ratingValue" value="5">
+                                <?php for($i=1; $i<=5; $i++): ?>
+                                    <span class="star-select" data-val="<?php echo $i; ?>"><?php echo getIcon('star', 22); ?></span>
+                                <?php endfor; ?>
+                            </div>
+                            <textarea name="comment" placeholder="Share your experience with this professional..." required></textarea>
+                            <button type="submit" class="btn-submit-review">Submit Review</button>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -776,6 +803,39 @@ function showToast(title,msg,success=true){
     t.className='toast '+(success?'success':'error')+' show';
     setTimeout(()=>t.classList.remove('show'),3500);
 }
+
+/* ── Submit Review via AJAX ── */
+document.querySelectorAll('.star-select').forEach(star => {
+    star.addEventListener('click', function() {
+        const val = parseInt(this.getAttribute('data-val'));
+        document.getElementById('ratingValue').value = val;
+        document.querySelectorAll('.star-select').forEach((s, idx) => {
+            if(idx < val) s.classList.remove('empty');
+            else s.classList.add('empty');
+        });
+    });
+});
+
+document.getElementById('reviewForm')?.addEventListener('submit', function(e){
+    e.preventDefault();
+    const btn = this.querySelector('.btn-submit-review');
+    btn.disabled = true; btn.textContent = 'Submitting...';
+    fetch('ajax/submit_review.php', { method: 'POST', body: new FormData(this) })
+        .then(r => r.json())
+        .then(data => {
+            if(data.success){
+                showToast('Review Submitted', 'Thank you for your feedback!', true);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showToast('Error', data.error || 'Failed to submit review.', false);
+                btn.disabled = false; btn.textContent = 'Submit Review';
+            }
+        })
+        .catch(() => {
+            showToast('Error', 'Network error occurred.', false);
+            btn.disabled = false; btn.textContent = 'Submit Review';
+        });
+});
 
 document.addEventListener('keydown',e=>{
     if(e.key==='Escape') closeModal();

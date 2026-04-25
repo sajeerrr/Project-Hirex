@@ -31,7 +31,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--t
     position:fixed;top:0;left:0;bottom:0;z-index:1000;transition:var(--transition);overflow:hidden;}
 .logo{font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;
     margin-bottom:8px;padding-left:14px;letter-spacing:-.5px;color:var(--text-primary);
-    display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    display:flex;align-items:center;flex-shrink:0;}
 .logo .x{color:var(--primary)}
 .worker-badge{background:linear-gradient(135deg,var(--mint-500),var(--mint-600));color:#fff;
     font-size:9px;padding:3px 8px;border-radius:6px;font-weight:700;text-transform:uppercase;
