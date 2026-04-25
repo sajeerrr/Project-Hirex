@@ -8,8 +8,7 @@ $stmt=$conn->prepare('SELECT * FROM workers WHERE id=?'); $stmt->bind_param('i',
 $worker=$stmt->get_result()->fetch_assoc(); $stmt->close();
 if (!$worker) { session_destroy(); header('Location: ../login.php'); exit; }
 
-// Create availability table if needed
-$conn->query("CREATE TABLE IF NOT EXISTS worker_availability(id INT AUTO_INCREMENT PRIMARY KEY,worker_id INT NOT NULL,day_of_week ENUM('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'),start_time TIME,end_time TIME,is_available TINYINT(1) DEFAULT 1,UNIQUE KEY uniq(worker_id,day_of_week))");
+
 
 // Handle availability toggle
 if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['toggle_avail'])) {

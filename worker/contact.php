@@ -15,12 +15,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     $category=$_POST['category']??'general';
     if (!$subject||!$message) { $error='All fields required.'; }
     else {
-        // Insert into contacts (no worker contacts table, use contacts)
-        $ins=$conn->prepare("INSERT INTO contacts(user_id,name,email,phone,subject,category,message,status) VALUES(?,?,?,?,?,?,'".addslashes($message)."','pending')");
-        // Use worker ID as user_id placeholder (-worker_id to avoid FK conflict) — or just use 1
-        // Since contacts has FK to users, we'll skip the FK and use user_id=0 workaround or a string insert
-        $conn->query("INSERT INTO contacts(user_id,name,email,phone,subject,category,message,status) VALUES(1,'".addslashes($worker['name'])."','".addslashes($worker['email']??'')."','".addslashes($worker['phone']??'')."','[WORKER] ".addslashes($subject)."','".addslashes($category)."','".addslashes($message)."','pending')");
-        $success='Message sent! We\'ll respond within 24 hours.';
+        // contacts table has FK: user_id -> users(id). Use complaints table instead (no FK on user_id)
+        $subj='[WORKER #'.$worker_id.'] '.$subject;
+        $stmt2=$conn->prepare("INSERT INTO complaints(user_id,worker_id,subject,message,status,priority) VALUES(1,?,?,?,'pending','medium')");
+        $stmt2->bind_param('iss',$worker_id,$subj,$message);
+        if ($stmt2->execute()) { $success='Message sent! We\'ll respond within 24 hours.'; }
+        else { $error='Failed to send. Please try again.'; }
+        $stmt2->close();
     }
 }
 
@@ -41,11 +42,10 @@ include('../includes/worker-page-start.php');
             <div class="form-group">
                 <label class="form-label">Category</label>
                 <select class="form-select" name="category">
-                    <option value="payment">Payment Issue</option>
                     <option value="booking">Booking Problem</option>
                     <option value="account">Account Issue</option>
                     <option value="technical">Technical Problem</option>
-                    <option value="general">General Enquiry</option>
+                    <option value="general" selected>General Enquiry</option>
                 </select>
             </div>
             <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" name="subject" required placeholder="Brief description of your issue"></div>

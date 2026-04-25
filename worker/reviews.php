@@ -29,8 +29,6 @@ if ($filter==='pending') $where.=" AND (r.reply IS NULL OR r.reply='')";
 if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['review_id'])) {
     $rid=(int)$_POST['review_id'];
     $reply=trim($_POST['reply_text']??'');
-    $conn->query("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS reply TEXT AFTER comment");
-    $conn->query("ALTER TABLE reviews ADD COLUMN IF NOT EXISTS replied_at TIMESTAMP NULL AFTER reply");
     if ($reply) {
         $u=$conn->prepare("UPDATE reviews SET reply=?,replied_at=NOW() WHERE id=? AND worker_id=?");
         $u->bind_param('sii',$reply,$rid,$worker_id); $u->execute(); $u->close();

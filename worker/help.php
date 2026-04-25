@@ -13,13 +13,13 @@ include('../includes/worker-page-start.php');
 
 $faqs=[
     ['How do I accept a job request?','Go to Job Requests, find the pending request, and click Accept. The client will be notified immediately.'],
-    ['How do I get paid?','After completing a job, earnings (minus the 10% platform fee) are credited to your wallet. You can withdraw from the Withdraw page.'],
-    ['What is the minimum withdrawal amount?','The minimum withdrawal amount is ₹200. Withdrawals are processed within 2–3 business days.'],
+    ['How do I get paid?','Payment is handled directly between you and the client after job completion. Agree on payment terms before starting.'],
     ['How can I improve my rating?','Complete jobs on time, communicate clearly with clients, and go the extra mile. Happy clients leave great reviews!'],
     ['How do I set my availability?','Go to Availability and toggle per-day on/off. You can also set working hours for each day of the week.'],
     ['Can I reject a job request?','Yes. On any pending request, click Decline. The client will be notified that you\'re unavailable.'],
     ['How do I update my services?','Go to My Services to add, edit, or remove service offerings with your pricing.'],
     ['I received a bad review, what can I do?','You can reply to any review publicly to address the client\'s concern. Reviews cannot be deleted.'],
+    ['How do I update my profile?','Go to My Profile to update your name, contact info, location, specialization, and hourly rate.'],
 ];
 ?>
 

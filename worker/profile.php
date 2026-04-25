@@ -10,16 +10,16 @@ if (!$worker) { session_destroy(); header('Location: ../login.php'); exit; }
 
 $success=''; $error='';
 
-// Handle profile update
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     $tab = $_POST['tab'] ?? 'personal';
 
     if ($tab==='personal') {
-        $name  = trim($_POST['name'] ?? '');
-        $email = trim($_POST['email'] ?? '');
-        $phone = trim($_POST['phone'] ?? '');
-        $city  = trim($_POST['city'] ?? '');
-        $bio   = trim($_POST['bio'] ?? '');
+        $name     = trim($_POST['name'] ?? '');
+        $email    = trim($_POST['email'] ?? '');
+        $phone    = trim($_POST['phone'] ?? '');
+        $location = trim($_POST['location'] ?? '');
+        $city     = trim($_POST['city'] ?? '');
+        $bio      = trim($_POST['bio'] ?? '');
 
         if (!$name || !$email) { $error='Name and email are required.'; }
         elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) { $error='Invalid email format.'; }
@@ -31,19 +31,21 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
                 else {
                     $fname='worker_'.$worker_id.'_'.time().'.'.$ext;
                     $dest='../assets/images/workers/'.$fname;
+                    if (!is_dir('../assets/images/workers/')) mkdir('../assets/images/workers/', 0755, true);
                     if (move_uploaded_file($_FILES['photo']['tmp_name'],$dest)) { $photoCol=', photo=?'; $photoVal=$fname; $photoType='s'; }
                 }
             }
             if (!$error) {
                 if ($photoCol) {
-                    $u=$conn->prepare("UPDATE workers SET name=?,email=?,phone=?,city=?,bio=?$photoCol WHERE id=?");
-                    $u->bind_param('sssss'.$photoType.'i',$name,$email,$phone,$city,$bio,$photoVal,$worker_id);
+                    $u=$conn->prepare("UPDATE workers SET name=?,email=?,phone=?,location=?,city=?,bio=?$photoCol WHERE id=?");
+                    $u->bind_param('ssssss'.$photoType.'i',$name,$email,$phone,$location,$city,$bio,$photoVal,$worker_id);
                 } else {
-                    $u=$conn->prepare("UPDATE workers SET name=?,email=?,phone=?,city=?,bio=? WHERE id=?");
-                    $u->bind_param('sssssi',$name,$email,$phone,$city,$bio,$worker_id);
+                    $u=$conn->prepare("UPDATE workers SET name=?,email=?,phone=?,location=?,city=?,bio=? WHERE id=?");
+                    $u->bind_param('ssssssi',$name,$email,$phone,$location,$city,$bio,$worker_id);
                 }
                 $u->execute(); $u->close();
-                $worker['name']=$name; $worker['email']=$email; $worker['phone']=$phone; $worker['city']=$city; $worker['bio']=$bio;
+                $worker['name']=$name; $worker['email']=$email; $worker['phone']=$phone;
+                $worker['location']=$location; $worker['city']=$city; $worker['bio']=$bio;
                 if ($photoVal) $worker['photo']=$photoVal;
                 $success='Profile updated successfully!';
             }
@@ -82,11 +84,8 @@ if (!empty($worker['photo'])) {
 }
 $initial=strtoupper(substr(preg_replace('/[^a-zA-Z]/','', $worker['name']??'W'),0,1))?:'W';
 
-// Stats for sidebar profile
 $totalJobs=$worker['jobs']??0;
-if(!$totalJobs) $totalJobs=(int)($conn->query("SELECT COUNT(*) as c FROM bookings WHERE worker_id=$worker_id AND status='completed'")->fetch_assoc()['c']??0);
 $avgRating=$worker['rating']??0;
-if(!$avgRating) { $rq=$conn->query("SELECT ROUND(AVG(rating),1) as r FROM reviews WHERE worker_id=$worker_id"); if($rq) $avgRating=$rq->fetch_assoc()['r']??0; }
 
 $pageTitle='My Profile'; $pageSubtitle='Manage your personal and professional information.';
 include('../includes/worker-page-start.php');
@@ -101,10 +100,10 @@ include('../includes/worker-page-start.php');
     </div>
     <h3 style="font-size:18px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text-primary)"><?php echo wE($worker['name']??'');?></h3>
     <div style="background:var(--primary-light);color:var(--primary);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;display:inline-block;margin:6px 0"><?php echo wE($worker['role']??'Worker');?></div>
-    <?php if($worker['city']??''):?><div style="font-size:12px;color:var(--text-gray);margin-bottom:8px"><?php echo wGetIcon('location',13);?> <?php echo wE($worker['city']);?></div><?php endif;?>
+    <?php $loc=$worker['city']??$worker['location']??''; if($loc):?><div style="font-size:12px;color:var(--text-gray);margin-bottom:8px"><?php echo wGetIcon('location',13);?> <?php echo wE($loc);?></div><?php endif;?>
     <div style="display:flex;justify-content:center;gap:4px;margin:8px 0">
         <?php for($s=1;$s<=5;$s++) echo '<span style="color:'.($s<=$avgRating?'#f59e0b':'var(--border)').'">★</span>';?>
-        <span style="font-size:12px;color:var(--text-gray);margin-left:4px">(<?php echo number_format($avgRating,1);?>)</span>
+        <span style="font-size:12px;color:var(--text-gray);margin-left:4px">(<?php echo number_format((float)$avgRating,1);?>)</span>
     </div>
     <div style="background:<?php echo $worker['available']?'rgba(34,197,94,.1)':'rgba(239,68,68,.1)';?>;color:<?php echo $worker['available']?'var(--mint-600)':'var(--danger)';?>;padding:5px 16px;border-radius:20px;font-size:11px;font-weight:700;display:inline-block;margin-bottom:14px"><?php echo $worker['available']?'● Available':'● Busy';?></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;border-top:1px solid var(--border);padding-top:16px">
@@ -133,7 +132,8 @@ include('../includes/worker-page-start.php');
                 <div class="form-group"><label class="form-label">Full Name *</label><input type="text" class="form-input" name="name" value="<?php echo wE($worker['name']??'');?>" required></div>
                 <div class="form-group"><label class="form-label">Email *</label><input type="email" class="form-input" name="email" value="<?php echo wE($worker['email']??'');?>" required></div>
                 <div class="form-group"><label class="form-label">Phone</label><input type="tel" class="form-input" name="phone" value="<?php echo wE($worker['phone']??'');?>"></div>
-                <div class="form-group"><label class="form-label">City</label><input type="text" class="form-input" name="city" value="<?php echo wE($worker['city']??$worker['location']??'');?>"></div>
+                <div class="form-group"><label class="form-label">Location</label><input type="text" class="form-input" name="location" value="<?php echo wE($worker['location']??'');?>"></div>
+                <div class="form-group"><label class="form-label">City</label><input type="text" class="form-input" name="city" value="<?php echo wE($worker['city']??'');?>"></div>
             </div>
             <div class="form-group"><label class="form-label">Bio</label><textarea class="form-textarea" name="bio" rows="3"><?php echo wE($worker['bio']??'');?></textarea></div>
             <div class="form-group"><label class="form-label">Profile Photo</label><input type="file" class="form-input" name="photo" accept="image/*"></div>
@@ -148,7 +148,7 @@ include('../includes/worker-page-start.php');
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
                 <div class="form-group"><label class="form-label">Specialization</label>
                     <select class="form-select" name="role">
-                        <?php foreach(['Electrician','Plumber','Carpenter','Painter','AC Technician','Mechanic'] as $r):?>
+                        <?php foreach(['Electrician','Plumber','Carpenter','Painter','AC Technician','Mechanic','Cleaner'] as $r):?>
                         <option value="<?php echo $r;?>" <?php echo ($worker['role']??'')===$r?'selected':'';?>><?php echo $r;?></option>
                         <?php endforeach;?>
                     </select>

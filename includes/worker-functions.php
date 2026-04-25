@@ -1,4 +1,8 @@
 <?php
+/**
+ * Worker Functions — shared utilities for the HireX worker portal
+ * All icons, formatters, and data helpers used across worker pages.
+ */
 if (!function_exists('wGetIcon')) {
 function wGetIcon($name, $size = 18, $class = '') {
     $icons = [
@@ -50,6 +54,7 @@ function wStatusBadge($status) {
         'requested'   => ['#f59e0b', '#fef3c7'],
         'processing'  => ['#3b82f6', '#dbeafe'],
         'credited'    => ['#16a34a', '#dcfce7'],
+        'paid'        => ['#16a34a', '#dcfce7'],
         'withdrawn'   => ['#8b5cf6', '#ede9fe'],
         'rejected'    => ['#ef4444', '#fee2e2'],
         'approved'    => ['#16a34a', '#dcfce7'],
@@ -68,21 +73,19 @@ function wE($v) {
     return htmlspecialchars((string)($v ?? ''), ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * Get worker stats from DB.
+ * No earnings table — uses requests table for completed amounts.
+ */
 function wGetWorkerStats($conn, $worker_id) {
     $wid = (int)$worker_id;
-    $earned = 0; $done = 0; $rating = 0; $pending = 0; $balance = 0;
+    $earned = 0; $done = 0; $rating = 0; $pending = 0;
 
-    // earnings table may not exist yet
-    try { $r = @$conn->query("SELECT COALESCE(SUM(total_amount),0) as t FROM earnings WHERE worker_id=$wid AND status IN ('credited','withdrawn')"); if ($r) $earned = $r->fetch_assoc()['t'] ?? 0; } catch (\Exception $e) {}
-
+    try { $r = @$conn->query("SELECT COALESCE(SUM(amount),0) as t FROM requests WHERE worker_id=$wid AND status='completed'"); if ($r) $earned = $r->fetch_assoc()['t'] ?? 0; } catch (\Exception $e) {}
     try { $r = @$conn->query("SELECT COUNT(*) as t FROM bookings WHERE worker_id=$wid AND status='completed'"); if ($r) $done = $r->fetch_assoc()['t'] ?? 0; } catch (\Exception $e) {}
-
     try { $r = @$conn->query("SELECT ROUND(COALESCE(AVG(rating),0),1) as t FROM reviews WHERE worker_id=$wid"); if ($r) $rating = $r->fetch_assoc()['t'] ?? 0; } catch (\Exception $e) {}
-
     try { $r = @$conn->query("SELECT COUNT(*) as t FROM bookings WHERE worker_id=$wid AND status='pending'"); if ($r) $pending = $r->fetch_assoc()['t'] ?? 0; } catch (\Exception $e) {}
 
-    try { $r = @$conn->query("SELECT COALESCE(SUM(total_amount),0) as t FROM earnings WHERE worker_id=$wid AND status='credited'"); if ($r) $balance = $r->fetch_assoc()['t'] ?? 0; } catch (\Exception $e) {}
-
-    return compact('earned', 'done', 'rating', 'pending', 'balance');
+    return compact('earned', 'done', 'rating', 'pending');
 }
 ?>

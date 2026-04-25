@@ -53,19 +53,8 @@ $miniStats = [
 // Handle complete action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_id'])) {
     $bid = (int)$_POST['complete_id'];
-    $check = $conn->prepare("SELECT id, total_amount FROM bookings WHERE id=? AND worker_id=? AND status='in_progress'");
-    $check->bind_param('ii', $bid, $worker_id); $check->execute();
-    $brow = $check->get_result()->fetch_assoc(); $check->close();
-    if ($brow) {
-        $conn->prepare("UPDATE bookings SET status='completed' WHERE id=?")->execute() || true;
-        $upd = $conn->prepare("UPDATE bookings SET status='completed' WHERE id=?"); $upd->bind_param('i',$bid); $upd->execute(); $upd->close();
-        $gross = (float)$brow['total_amount'];
-        $fee   = round($gross * 0.10, 2);
-        $net   = $gross - $fee;
-        // Insert earnings if table exists
-        $conn->query("INSERT IGNORE INTO earnings(worker_id,booking_id,gross_amount,platform_fee,total_amount,status,credited_at)
-            VALUES($worker_id,$bid,$gross,$fee,$net,'credited',NOW())");
-    }
+    $upd = $conn->prepare("UPDATE bookings SET status='completed' WHERE id=? AND worker_id=? AND status='in_progress'");
+    $upd->bind_param('ii',$bid,$worker_id); $upd->execute(); $upd->close();
     header('Location: bookings.php?status='.$status.'&saved=1'); exit;
 }
 

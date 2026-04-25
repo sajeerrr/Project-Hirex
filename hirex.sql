@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 25, 2026 at 08:54 AM
+-- Generation Time: Apr 25, 2026 at 09:55 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -32,15 +32,57 @@ CREATE TABLE `admin` (
   `name` varchar(100) DEFAULT NULL,
   `email` varchar(100) DEFAULT NULL,
   `password` varchar(255) DEFAULT NULL,
-  `role` varchar(20) DEFAULT 'admin'
+  `role` varchar(20) DEFAULT 'admin',
+  `status` varchar(20) DEFAULT 'active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `admin`
 --
 
-INSERT INTO `admin` (`id`, `name`, `email`, `password`, `role`) VALUES
-(1, 'Admin', 'admin@hirex.com', '$2y$10$7vDXKwBfCMezFqU0p8t/OOpfS4oF.H.tZth183a4DlxJfSa.ppM62', 'admin');
+INSERT INTO `admin` (`id`, `name`, `email`, `password`, `role`, `status`) VALUES
+(1, 'Admin', 'admin@hirex.com', '$2y$10$7vDXKwBfCMezFqU0p8t/OOpfS4oF.H.tZth183a4DlxJfSa.ppM62', 'admin', 'active');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `admin_logs`
+--
+
+CREATE TABLE `admin_logs` (
+  `id` int(11) NOT NULL,
+  `admin_id` int(11) DEFAULT NULL,
+  `action` varchar(255) DEFAULT NULL,
+  `details` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `admin_settings`
+--
+
+CREATE TABLE `admin_settings` (
+  `id` int(11) NOT NULL,
+  `admin_id` int(11) NOT NULL,
+  `email_notifications` tinyint(1) DEFAULT 1,
+  `booking_alerts` tinyint(1) DEFAULT 1,
+  `worker_approvals` tinyint(1) DEFAULT 1,
+  `complaint_alerts` tinyint(1) DEFAULT 1,
+  `maintenance_mode` tinyint(1) DEFAULT 0,
+  `allow_registration` tinyint(1) DEFAULT 1,
+  `max_booking_days` int(11) DEFAULT 30,
+  `default_currency` varchar(10) DEFAULT 'INR',
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `admin_settings`
+--
+
+INSERT INTO `admin_settings` (`id`, `admin_id`, `email_notifications`, `booking_alerts`, `worker_approvals`, `complaint_alerts`, `maintenance_mode`, `allow_registration`, `max_booking_days`, `default_currency`, `updated_at`) VALUES
+(1, 1, 1, 1, 1, 1, 0, 1, 30, 'INR', '2026-04-25 19:04:41');
 
 -- --------------------------------------------------------
 
@@ -72,6 +114,32 @@ INSERT INTO `bookings` (`id`, `user_id`, `worker_id`, `booking_date`, `duration_
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `complaints`
+--
+
+CREATE TABLE `complaints` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `worker_id` int(11) DEFAULT NULL,
+  `subject` varchar(255) DEFAULT NULL,
+  `message` text NOT NULL,
+  `status` enum('pending','in_progress','resolved') DEFAULT 'pending',
+  `priority` enum('low','medium','high') DEFAULT 'medium',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `complaints`
+--
+
+INSERT INTO `complaints` (`id`, `user_id`, `worker_id`, `subject`, `message`, `status`, `priority`, `created_at`, `updated_at`) VALUES
+(1, 1, 2, 'Late Arrival', 'Worker arrived 2 hours late', 'pending', 'high', '2026-04-25 17:54:24', '2026-04-25 17:54:24'),
+(2, 1, NULL, 'App Issue', 'Unable to book worker from dashboard', 'pending', 'medium', '2026-04-25 17:54:24', '2026-04-25 17:54:24');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `contacts`
 --
 
@@ -85,6 +153,21 @@ CREATE TABLE `contacts` (
   `category` varchar(50) DEFAULT NULL,
   `message` text NOT NULL,
   `status` varchar(20) DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `earnings`
+--
+
+CREATE TABLE `earnings` (
+  `id` int(11) NOT NULL,
+  `worker_id` int(11) DEFAULT NULL,
+  `booking_id` int(11) DEFAULT NULL,
+  `amount` decimal(10,2) DEFAULT NULL,
+  `status` varchar(50) DEFAULT 'paid',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -118,6 +201,23 @@ INSERT INTO `messages` (`id`, `sender_id`, `sender_type`, `receiver_id`, `receiv
 (7, 1, 'user', 2, 'worker', 'hi', 0, '2026-04-12 18:31:59'),
 (8, 1, 'user', 1, 'worker', 'hi', 0, '2026-04-12 18:32:22'),
 (9, 1, 'user', 5, 'worker', 'he', 0, '2026-04-13 04:55:48');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `payments`
+--
+
+CREATE TABLE `payments` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `worker_id` int(11) NOT NULL,
+  `booking_id` int(11) DEFAULT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `payment_method` varchar(50) DEFAULT NULL,
+  `status` enum('pending','completed','failed') DEFAULT 'completed',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -160,7 +260,9 @@ CREATE TABLE `reviews` (
   `worker_id` int(11) NOT NULL,
   `rating` int(11) DEFAULT NULL,
   `comment` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `reply` text DEFAULT NULL,
+  `replied_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -192,17 +294,19 @@ CREATE TABLE `users` (
   `role` varchar(20) DEFAULT 'user',
   `phone` varchar(20) DEFAULT NULL,
   `bio` text DEFAULT NULL,
-  `photo` varchar(255) DEFAULT NULL
+  `photo` varchar(255) DEFAULT NULL,
+  `status` varchar(20) DEFAULT 'active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `location`, `created_at`, `role`, `phone`, `bio`, `photo`) VALUES
-(1, 'Alex', 'alex@gmail.com', '$2y$10$Pqk6xiBx7QGfQ.UCJ7/4UeP6.HWc0vt/2HeikVo2PbtGaC4LCkXUK', 'trivandrum', '2026-04-12 10:24:44', 'user', '1234567890', 'Life is easy when we find workers', 'user_1_1775990176.jpg'),
-(2, 'Rahul', 'rahul@gmail.com', '$2y$10$EuqN7ZtKZ0YFUZBMWdDTF.IP5QS0JP//ICkOpxph3s.qxVl3Wtkpm', 'Kochi', '2026-03-15 09:58:44', 'user', NULL, NULL, NULL),
-(3, 'Anjali', 'anjali@gmail.com', '$2y$10$EuqN7ZtKZ0YFUZBMWdDTF.IP5QS0JP//ICkOpxph3s.qxVl3Wtkpm', 'Trivandrum', '2026-03-15 09:58:44', 'user', NULL, NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `location`, `created_at`, `role`, `phone`, `bio`, `photo`, `status`) VALUES
+(1, 'Alex', 'alex@gmail.com', '$2y$10$Pqk6xiBx7QGfQ.UCJ7/4UeP6.HWc0vt/2HeikVo2PbtGaC4LCkXUK', 'trivandrum', '2026-04-12 10:24:44', 'user', '1234567890', 'Life is easy when we find workers', 'user_1_1775990176.jpg', 'active'),
+(2, 'Rahul', 'rahul@gmail.com', '$2y$10$EuqN7ZtKZ0YFUZBMWdDTF.IP5QS0JP//ICkOpxph3s.qxVl3Wtkpm', 'Kochi', '2026-03-15 09:58:44', 'user', NULL, NULL, NULL, 'active'),
+(3, 'Anjali', 'anjali@gmail.com', '$2y$10$EuqN7ZtKZ0YFUZBMWdDTF.IP5QS0JP//ICkOpxph3s.qxVl3Wtkpm', 'Trivandrum', '2026-03-15 09:58:44', 'user', NULL, NULL, NULL, 'active'),
+(6, 'john', 'john@gmail.com', '$2y$10$uIBrfkNKETa8B4ITnL8bhebeeWJVt4cKj7xQZY8Bgw/PbvAD5T3ZS', 'trivandrum', '2026-04-25 06:57:29', 'user', '1234567890', '', '', 'active');
 
 -- --------------------------------------------------------
 
@@ -250,6 +354,23 @@ INSERT INTO `user_settings` (`id`, `user_id`, `email_notifications`, `booking_al
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `withdrawals`
+--
+
+CREATE TABLE `withdrawals` (
+  `id` int(11) NOT NULL,
+  `worker_id` int(11) NOT NULL,
+  `amount` decimal(10,2) DEFAULT 0.00,
+  `method` enum('bank','upi','wallet') DEFAULT 'bank',
+  `account_details` text DEFAULT NULL,
+  `status` enum('requested','processing','completed','rejected') DEFAULT 'requested',
+  `requested_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `processed_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `workers`
 --
 
@@ -266,25 +387,63 @@ CREATE TABLE `workers` (
   `jobs` int(11) DEFAULT NULL,
   `location` varchar(100) DEFAULT NULL,
   `email` varchar(100) DEFAULT NULL,
-  `password` varchar(255) DEFAULT NULL
+  `password` varchar(255) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `status` varchar(20) DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `city` varchar(100) DEFAULT NULL,
+  `bio` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `workers`
 --
 
-INSERT INTO `workers` (`id`, `name`, `role`, `rating`, `price`, `reviews`, `available`, `photo`, `experience`, `jobs`, `location`, `email`, `password`) VALUES
-(1, 'Anoop Nair', 'Electrician', 4.7, 450, 120, 1, 'https://randomuser.me/api/portraits/men/11.jpg', '8 yrs', 320, 'Kozhikode', 'anoop@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S'),
-(2, 'Sajith Kumar', 'Plumber', 4.5, 350, 95, 1, 'https://randomuser.me/api/portraits/men/21.jpg', '6 yrs', 240, 'Kochi', 'sajith@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S'),
-(3, 'Pradeep Menon', 'Carpenter', 4.8, 500, 210, 0, 'https://randomuser.me/api/portraits/men/31.jpg', '12 yrs', 500, 'Thrissur', 'pradeep@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S'),
-(4, 'Biju Thomas', 'Painter', 4.3, 300, 140, 1, 'https://randomuser.me/api/portraits/men/41.jpg', '10 yrs', 410, 'Kannur', 'biju@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S'),
-(5, 'Ramesh Varghese', 'AC Technician', 4.9, 550, 260, 1, 'https://randomuser.me/api/portraits/men/51.jpg', '9 yrs', 380, 'Ernakulam', 'ramesh@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S'),
-(6, 'Faizal Rahman', 'Mechanic', 4.2, 400, 150, 0, 'https://randomuser.me/api/portraits/men/61.jpg', '7 yrs', 290, 'Malappuram', 'faizal@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S'),
-(7, 'Hari Krishnan', 'Electrician', 4.6, 420, 180, 1, 'https://randomuser.me/api/portraits/men/71.jpg', '11 yrs', 460, 'Palakkad', 'hari@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S'),
-(8, 'Shibu Joseph', 'Plumber', 4.1, 320, 100, 1, 'https://randomuser.me/api/portraits/men/81.jpg', '5 yrs', 210, 'Alappuzha', 'shibu@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S'),
-(9, 'Manoj Pillai', 'Carpenter', 4.4, 480, 160, 1, 'https://randomuser.me/api/portraits/men/91.jpg', '8 yrs', 350, 'Kollam', 'manoj@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S'),
-(10, 'Vinod Raj', 'Painter', 4.7, 330, 190, 1, 'https://randomuser.me/api/portraits/men/14.jpg', '13 yrs', 520, 'Thiruvananthapuram', 'vinod@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S'),
-(11, 'Bob', 'Painter', 0, 0, 0, 1, 'user-image.jpg', '0 yrs', 0, 'trivandrum', 'bob@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S');
+INSERT INTO `workers` (`id`, `name`, `role`, `rating`, `price`, `reviews`, `available`, `photo`, `experience`, `jobs`, `location`, `email`, `password`, `phone`, `status`, `created_at`, `city`, `bio`) VALUES
+(1, 'Anoop Nair', 'Electrician', 4.7, 450, 120, 1, 'https://randomuser.me/api/portraits/men/11.jpg', '8 yrs', 320, 'Kozhikode', 'anoop@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
+(2, 'Sajith Kumar', 'Plumber', 4.5, 350, 95, 1, 'https://randomuser.me/api/portraits/men/21.jpg', '6 yrs', 240, 'Kochi', 'sajith@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
+(3, 'Pradeep Menon', 'Carpenter', 4.8, 500, 210, 0, 'https://randomuser.me/api/portraits/men/31.jpg', '12 yrs', 500, 'Thrissur', 'pradeep@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
+(4, 'Biju Thomas', 'Painter', 4.3, 300, 140, 1, 'https://randomuser.me/api/portraits/men/41.jpg', '10 yrs', 410, 'Kannur', 'biju@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
+(5, 'Ramesh Varghese', 'AC Technician', 4.9, 550, 260, 1, 'https://randomuser.me/api/portraits/men/51.jpg', '9 yrs', 380, 'Ernakulam', 'ramesh@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
+(6, 'Faizal Rahman', 'Mechanic', 4.2, 400, 150, 0, 'https://randomuser.me/api/portraits/men/61.jpg', '7 yrs', 290, 'Malappuram', 'faizal@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
+(7, 'Hari Krishnan', 'Electrician', 4.6, 420, 180, 1, 'https://randomuser.me/api/portraits/men/71.jpg', '11 yrs', 460, 'Palakkad', 'hari@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
+(8, 'Shibu Joseph', 'Plumber', 4.1, 320, 100, 1, 'https://randomuser.me/api/portraits/men/81.jpg', '5 yrs', 210, 'Alappuzha', 'shibu@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
+(9, 'Manoj Pillai', 'Carpenter', 4.4, 480, 160, 1, 'https://randomuser.me/api/portraits/men/91.jpg', '8 yrs', 350, 'Kollam', 'manoj@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
+(10, 'Vinod Raj', 'Painter', 4.7, 330, 190, 1, 'https://randomuser.me/api/portraits/men/14.jpg', '13 yrs', 520, 'Thiruvananthapuram', 'vinod@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
+(11, 'Bob', 'Painter', 0, 0, 0, 1, 'user-image.jpg', '0 yrs', 0, 'trivandrum', 'bob@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
+(12, 'hello', 'Cleaner', 0, 0, 0, 1, 'default.png', '0 yrs', 0, 'trivandrum', 'hello@gmail.com', '$2y$10$lF.K04yrWwDeRrB3Zh2z.ekM7LacLIecUWmvjxzIxrG8adv4eiXfG', '1234567890', 'active', '2026-04-25 18:05:44', NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `worker_availability`
+--
+
+CREATE TABLE `worker_availability` (
+  `id` int(11) NOT NULL,
+  `worker_id` int(11) NOT NULL,
+  `day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') DEFAULT NULL,
+  `start_time` time DEFAULT '09:00:00',
+  `end_time` time DEFAULT '17:00:00',
+  `is_available` tinyint(1) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `worker_services`
+--
+
+CREATE TABLE `worker_services` (
+  `id` int(11) NOT NULL,
+  `worker_id` int(11) NOT NULL,
+  `service_name` varchar(150) NOT NULL,
+  `description` text DEFAULT NULL,
+  `price` decimal(10,2) DEFAULT 0.00,
+  `duration_hours` decimal(5,2) DEFAULT 1.00,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Indexes for dumped tables
@@ -297,10 +456,31 @@ ALTER TABLE `admin`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `admin_logs`
+--
+ALTER TABLE `admin_logs`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `admin_settings`
+--
+ALTER TABLE `admin_settings`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `admin_id` (`admin_id`);
+
+--
 -- Indexes for table `bookings`
 --
 ALTER TABLE `bookings`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `complaints`
+--
+ALTER TABLE `complaints`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fk_complaint_user` (`user_id`),
+  ADD KEY `fk_complaint_worker` (`worker_id`);
 
 --
 -- Indexes for table `contacts`
@@ -310,9 +490,21 @@ ALTER TABLE `contacts`
   ADD KEY `user_id` (`user_id`);
 
 --
+-- Indexes for table `earnings`
+--
+ALTER TABLE `earnings`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `messages`
 --
 ALTER TABLE `messages`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `payments`
+--
+ALTER TABLE `payments`
   ADD PRIMARY KEY (`id`);
 
 --
@@ -354,11 +546,29 @@ ALTER TABLE `user_settings`
   ADD UNIQUE KEY `user_id` (`user_id`);
 
 --
+-- Indexes for table `withdrawals`
+--
+ALTER TABLE `withdrawals`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `workers`
 --
 ALTER TABLE `workers`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `email` (`email`);
+
+--
+-- Indexes for table `worker_availability`
+--
+ALTER TABLE `worker_availability`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `worker_services`
+--
+ALTER TABLE `worker_services`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -371,10 +581,28 @@ ALTER TABLE `admin`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT for table `admin_logs`
+--
+ALTER TABLE `admin_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `admin_settings`
+--
+ALTER TABLE `admin_settings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `bookings`
 --
 ALTER TABLE `bookings`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `complaints`
+--
+ALTER TABLE `complaints`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `contacts`
@@ -383,10 +611,22 @@ ALTER TABLE `contacts`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `earnings`
+--
+ALTER TABLE `earnings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `messages`
 --
 ALTER TABLE `messages`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `payments`
+--
+ALTER TABLE `payments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `requests`
@@ -410,7 +650,7 @@ ALTER TABLE `saved_workers`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `user_activity`
@@ -425,14 +665,39 @@ ALTER TABLE `user_settings`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `withdrawals`
+--
+ALTER TABLE `withdrawals`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `workers`
 --
 ALTER TABLE `workers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+
+--
+-- AUTO_INCREMENT for table `worker_availability`
+--
+ALTER TABLE `worker_availability`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `worker_services`
+--
+ALTER TABLE `worker_services`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `complaints`
+--
+ALTER TABLE `complaints`
+  ADD CONSTRAINT `fk_complaint_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_complaint_worker` FOREIGN KEY (`worker_id`) REFERENCES `workers` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `contacts`

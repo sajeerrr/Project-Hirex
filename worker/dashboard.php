@@ -25,13 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_avail'])) {
 
 // Stats
 $stats = wGetWorkerStats($conn, $worker_id);
-
-// Fallback: pull from requests table if earnings table is empty
 $totalEarned = $stats['earned'];
-if ($totalEarned == 0) {
-    $rq = $conn->query("SELECT COALESCE(SUM(amount),0) as t FROM requests WHERE worker_id=$worker_id AND status='completed'");
-    if ($rq) $totalEarned = $rq->fetch_assoc()['t'] ?? 0;
-}
+
+// Combine bookings + requests counts
 $pendingExtra = (int)($conn->query("SELECT COUNT(*) as c FROM requests WHERE worker_id=$worker_id AND status='pending'")->fetch_assoc()['c'] ?? 0);
 $doneExtra    = (int)($conn->query("SELECT COUNT(*) as c FROM requests WHERE worker_id=$worker_id AND status='completed'")->fetch_assoc()['c'] ?? 0);
 $totalPending   = $stats['pending'] + $pendingExtra;

@@ -10,20 +10,29 @@ if (!$worker) { session_destroy(); header('Location: ../login.php'); exit; }
 
 $activeUserId=(int)($_GET['user_id']??0);
 
-// Fetch conversation list
+// Fetch conversation list — get distinct user IDs the worker has chatted with
 $conversations=[];
-$r=$conn->query("SELECT DISTINCT CASE WHEN sender_type='user' THEN sender_id ELSE receiver_id END as uid FROM messages WHERE (receiver_id=$worker_id AND receiver_type='worker') OR (sender_id=$worker_id AND sender_type='worker') ORDER BY (SELECT MAX(created_at) FROM messages m2 WHERE (m2.sender_id=uid AND m2.sender_type='user') OR (m2.receiver_id=uid AND m2.receiver_type='user')) DESC LIMIT 30");
+$convSql = "SELECT DISTINCT
+    CASE WHEN sender_type='user' THEN sender_id ELSE receiver_id END as uid
+    FROM messages
+    WHERE (receiver_id=$worker_id AND receiver_type='worker')
+       OR (sender_id=$worker_id AND sender_type='worker')";
+$r=$conn->query($convSql);
 if ($r) {
     while ($row=$r->fetch_assoc()) {
         $uid=(int)$row['uid'];
         if (!$uid) continue;
-        $u=$conn->query("SELECT id,name,photo,phone FROM users WHERE id=$uid")->fetch_assoc();
+        $uStmt=$conn->query("SELECT id,name,photo,phone FROM users WHERE id=$uid");
+        if (!$uStmt) continue;
+        $u=$uStmt->fetch_assoc();
         if (!$u) continue;
         $last=$conn->query("SELECT message,created_at FROM messages WHERE ((sender_id=$uid AND sender_type='user' AND receiver_id=$worker_id AND receiver_type='worker') OR (sender_id=$worker_id AND sender_type='worker' AND receiver_id=$uid AND receiver_type='user')) ORDER BY created_at DESC LIMIT 1")->fetch_assoc();
         $unread=(int)$conn->query("SELECT COUNT(*) as c FROM messages WHERE sender_id=$uid AND sender_type='user' AND receiver_id=$worker_id AND receiver_type='worker' AND is_read=0")->fetch_assoc()['c'];
-        $conversations[]=['user'=>$u,'last'=>$last,'unread'=>$unread];
+        $conversations[]=['user'=>$u,'last'=>$last,'unread'=>$unread,'last_time'=>$last['created_at']??'2000-01-01'];
     }
 }
+// Sort by most recent message
+usort($conversations, fn($a,$b) => strtotime($b['last_time']) - strtotime($a['last_time']));
 
 // Load active chat
 $chatMessages=[];

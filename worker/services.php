@@ -36,7 +36,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['action'])) {
     }
     if ($a==='delete') {
         $sid=(int)($_POST['service_id']??0);
-        $conn->prepare("DELETE FROM worker_services WHERE id=? AND worker_id=?")->execute() || true;
         $d=$conn->prepare("DELETE FROM worker_services WHERE id=? AND worker_id=?"); $d->bind_param('ii',$sid,$worker_id); $d->execute(); $d->close();
         header('Location: services.php?saved=1'); exit;
     }
