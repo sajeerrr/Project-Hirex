@@ -150,9 +150,10 @@ if(isset($_POST['login'])){
             background-color: var(--bg);
             color: var(--text-primary);
             transition: var(--transition);
-            overflow-x: hidden;
+            overflow: hidden;
             line-height: 1.6;
             height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             background-image: 
@@ -286,8 +287,11 @@ if(isset($_POST['login'])){
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 40px 20px;
-            min-height: calc(100vh - 73px);
+            padding: 16px 20px;
+            min-height: 0;
+            height: calc(100vh - 73px);
+            height: calc(100dvh - 73px);
+            overflow: hidden;
         }
 
         .login-wrapper {
@@ -295,6 +299,7 @@ if(isset($_POST['login'])){
             grid-template-columns: 1fr 1fr;
             max-width: 1100px;
             width: 100%;
+            max-height: 100%;
             background: var(--bg-secondary);
             border-radius: 24px;
             overflow: hidden;
@@ -304,14 +309,15 @@ if(isset($_POST['login'])){
 
         /* Left Side - Form */
         .login-form-section {
-            padding: 60px 50px;
+            padding: 38px 46px;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            min-height: 0;
         }
 
         .login-header {
-            margin-bottom: 40px;
+            margin-bottom: 24px;
         }
 
         .login-header h1 {
@@ -339,7 +345,7 @@ if(isset($_POST['login'])){
         }
 
         .form-group {
-            margin-bottom: 24px;
+            margin-bottom: 18px;
         }
 
         .form-label {
@@ -376,7 +382,7 @@ if(isset($_POST['login'])){
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 24px;
+            margin-bottom: 18px;
         }
 
         .remember-me {
@@ -493,7 +499,7 @@ if(isset($_POST['login'])){
         /* Right Side - Image/Info */
         .login-info-section {
             background: linear-gradient(135deg, var(--mint-500), var(--teal-500));
-            padding: 60px 50px;
+            padding: 38px 46px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -530,20 +536,20 @@ if(isset($_POST['login'])){
         }
 
         .info-icon {
-            width: 80px;
-            height: 80px;
+            width: 68px;
+            height: 68px;
             background: rgba(255, 255, 255, 0.2);
             border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 32px;
+            margin-bottom: 22px;
             backdrop-filter: blur(10px);
         }
 
         .info-icon svg {
-            width: 40px;
-            height: 40px;
+            width: 34px;
+            height: 34px;
             color: white;
         }
 
@@ -551,15 +557,15 @@ if(isset($_POST['login'])){
             font-family: 'Plus Jakarta Sans', sans-serif;
             font-size: 32px;
             font-weight: 700;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             line-height: 1.2;
         }
 
         .info-content p {
             font-size: 15px;
             opacity: 0.95;
-            line-height: 1.7;
-            margin-bottom: 32px;
+            line-height: 1.55;
+            margin-bottom: 22px;
         }
 
         .info-features {
@@ -570,7 +576,7 @@ if(isset($_POST['login'])){
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             font-size: 14px;
         }
 
@@ -592,7 +598,7 @@ if(isset($_POST['login'])){
             }
 
             .login-form-section {
-                padding: 50px 40px;
+                padding: 36px 40px;
             }
         }
 
@@ -613,7 +619,7 @@ if(isset($_POST['login'])){
 
         @media (max-width: 480px) {
             .login-form-section {
-                padding: 40px 24px;
+                padding: 28px 24px;
             }
 
             .login-header h1 {

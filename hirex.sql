@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 14, 2026 at 06:01 AM
+-- Generation Time: Apr 25, 2026 at 08:54 AM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -74,8 +74,19 @@ INSERT INTO `bookings` (`id`, `user_id`, `worker_id`, `booking_date`, `duration_
 --
 -- Table structure for table `contacts`
 --
--- Error reading structure for table hirex.contacts: #1932 - Table &#039;hirex.contacts&#039; doesn&#039;t exist in engine
--- Error reading data for table hirex.contacts: #1064 - You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near &#039;FROM `hirex`.`contacts`&#039; at line 1
+
+CREATE TABLE `contacts` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `subject` varchar(255) NOT NULL,
+  `category` varchar(50) DEFAULT NULL,
+  `message` text NOT NULL,
+  `status` varchar(20) DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -198,16 +209,43 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `location`, `created_at`
 --
 -- Table structure for table `user_activity`
 --
--- Error reading structure for table hirex.user_activity: #1932 - Table &#039;hirex.user_activity&#039; doesn&#039;t exist in engine
--- Error reading data for table hirex.user_activity: #1064 - You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near &#039;FROM `hirex`.`user_activity`&#039; at line 1
+
+CREATE TABLE `user_activity` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `activity` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `timestamp` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
 --
 -- Table structure for table `user_settings`
 --
--- Error reading structure for table hirex.user_settings: #1932 - Table &#039;hirex.user_settings&#039; doesn&#039;t exist in engine
--- Error reading data for table hirex.user_settings: #1064 - You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near &#039;FROM `hirex`.`user_settings`&#039; at line 1
+
+CREATE TABLE `user_settings` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `email_notifications` tinyint(1) DEFAULT 1,
+  `booking_alerts` tinyint(1) DEFAULT 1,
+  `message_alerts` tinyint(1) DEFAULT 1,
+  `dark_mode` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `theme` varchar(20) DEFAULT 'light',
+  `default_location` varchar(100) DEFAULT NULL,
+  `preferred_category` varchar(100) DEFAULT NULL,
+  `show_profile` tinyint(1) DEFAULT 1,
+  `hide_contact` tinyint(1) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `user_settings`
+--
+
+INSERT INTO `user_settings` (`id`, `user_id`, `email_notifications`, `booking_alerts`, `message_alerts`, `dark_mode`, `created_at`, `updated_at`, `theme`, `default_location`, `preferred_category`, `show_profile`, `hide_contact`) VALUES
+(1, 1, 1, 1, 1, 0, '2026-04-25 06:45:13', '2026-04-25 06:45:13', 'light', NULL, NULL, 1, 0);
 
 -- --------------------------------------------------------
 
@@ -265,6 +303,13 @@ ALTER TABLE `bookings`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `contacts`
+--
+ALTER TABLE `contacts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Indexes for table `messages`
 --
 ALTER TABLE `messages`
@@ -296,6 +341,19 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `email` (`email`);
 
 --
+-- Indexes for table `user_activity`
+--
+ALTER TABLE `user_activity`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `user_settings`
+--
+ALTER TABLE `user_settings`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_id` (`user_id`);
+
+--
 -- Indexes for table `workers`
 --
 ALTER TABLE `workers`
@@ -317,6 +375,12 @@ ALTER TABLE `admin`
 --
 ALTER TABLE `bookings`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `contacts`
+--
+ALTER TABLE `contacts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `messages`
@@ -349,10 +413,32 @@ ALTER TABLE `users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
+-- AUTO_INCREMENT for table `user_activity`
+--
+ALTER TABLE `user_activity`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `user_settings`
+--
+ALTER TABLE `user_settings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT for table `workers`
 --
 ALTER TABLE `workers`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `contacts`
+--
+ALTER TABLE `contacts`
+  ADD CONSTRAINT `contacts_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

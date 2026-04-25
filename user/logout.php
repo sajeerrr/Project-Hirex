@@ -49,7 +49,7 @@ header("Pragma: no-cache");
 header("Expires: 0");
 
 // Redirect to login page
-header("Location: ../login.php");
+header("Location: ../index.php");
 
 // Ensure no further code executes
 exit;
