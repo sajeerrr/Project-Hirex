@@ -20,6 +20,15 @@ $userName = htmlspecialchars($user['name']);
 $userInitial = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $userName), 0, 1));
 $userInitial = !empty($userInitial) ? $userInitial : 'A';
 
+// Fetch saved worker IDs for this user
+$savedWorkerIds = [];
+$savedQuery = "SELECT worker_id FROM saved_workers WHERE user_id='$user_id'";
+$savedResult = $conn->query($savedQuery);
+if ($savedResult && $savedResult->num_rows > 0) {
+    while($row = $savedResult->fetch_assoc()) {
+        $savedWorkerIds[] = $row['worker_id'];
+    }
+}
 
 // Sample Worker Data with Profile Photos
 $workers = [];
@@ -1172,7 +1181,8 @@ function getIcon($name, $size = 20, $class = '') {
                                 <?php echo $worker['available'] ? getIcon('check', 10) : getIcon('x', 10); ?>
                                 <?php echo $worker['available'] ? 'Available' : 'Busy'; ?>
                             </span>
-                            <button class="bookmark-btn" onclick="toggleBookmark(this, '<?php echo htmlspecialchars($worker['name']); ?>')" aria-label="Save worker">
+                            <?php $isSaved = in_array($worker['id'], $savedWorkerIds); ?>
+                            <button class="bookmark-btn <?php echo $isSaved ? 'active' : ''; ?>" onclick="toggleBookmark(this, <?php echo $worker['id']; ?>, '<?php echo htmlspecialchars(addslashes($worker['name'])); ?>')" aria-label="Save worker">
                                 <?php echo getIcon('bookmark', 16); ?>
                             </button>
                         </div>
@@ -1268,10 +1278,34 @@ function getIcon($name, $size = 20, $class = '') {
         }
     })();
 
-    function toggleBookmark(btn, workerName) {
+    function toggleBookmark(btn, workerId, workerName) {
+        // Optimistic UI update
         btn.classList.toggle('active');
         const isBookmarked = btn.classList.contains('active');
-        showToast(isBookmarked ? 'Saved' : 'Removed', `${workerName} ${isBookmarked ? 'added to' : 'removed from'} bookmarks`, isBookmarked);
+        
+        // Send request
+        const formData = new FormData();
+        formData.append('worker_id', workerId);
+        
+        fetch('ajax/save_worker.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.action === 'saved' ? 'Saved' : 'Removed', `${workerName} ${data.action === 'saved' ? 'added to' : 'removed from'} bookmarks`, true);
+            } else {
+                // Revert UI on failure
+                btn.classList.toggle('active');
+                showToast('Error', data.error || 'Failed to save worker', false);
+            }
+        })
+        .catch(err => {
+            // Revert UI on failure
+            btn.classList.toggle('active');
+            showToast('Error', 'Network error occurred', false);
+        });
     }
 
     function hireWorker(workerName, workerRole) {
