@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 25, 2026 at 09:55 PM
+-- Generation Time: Apr 25, 2026 at 11:25 PM
 -- Server version: 10.4.28-MariaDB
 -- PHP Version: 8.2.4
 
@@ -109,7 +109,8 @@ CREATE TABLE `bookings` (
 --
 
 INSERT INTO `bookings` (`id`, `user_id`, `worker_id`, `booking_date`, `duration_hours`, `address`, `notes`, `total_amount`, `status`, `created_at`, `booking_time`) VALUES
-(1, 1, 2, '2026-04-12 14:00:00', 3, 'trivandrum', 'worker needed', 1050, 'pending', '2026-04-12 15:57:33', NULL);
+(1, 1, 2, '2026-04-12 14:00:00', 3, 'trivandrum', 'worker needed', 1050, 'pending', '2026-04-12 15:57:33', NULL),
+(2, 1, 11, '2026-04-25 03:00:00', 2, 'trivandrum', '', 800, 'completed', '2026-04-25 20:58:17', NULL);
 
 -- --------------------------------------------------------
 
@@ -200,7 +201,9 @@ INSERT INTO `messages` (`id`, `sender_id`, `sender_type`, `receiver_id`, `receiv
 (6, 1, 'user', 5, 'worker', 'hey', 0, '2026-04-12 18:27:36'),
 (7, 1, 'user', 2, 'worker', 'hi', 0, '2026-04-12 18:31:59'),
 (8, 1, 'user', 1, 'worker', 'hi', 0, '2026-04-12 18:32:22'),
-(9, 1, 'user', 5, 'worker', 'he', 0, '2026-04-13 04:55:48');
+(9, 1, 'user', 5, 'worker', 'he', 0, '2026-04-13 04:55:48'),
+(10, 1, 'user', 11, 'worker', 'hi', 1, '2026-04-25 20:58:01'),
+(11, 11, 'worker', 1, 'user', 'hello', 1, '2026-04-25 20:58:47');
 
 -- --------------------------------------------------------
 
@@ -265,6 +268,13 @@ CREATE TABLE `reviews` (
   `replied_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `reviews`
+--
+
+INSERT INTO `reviews` (`id`, `user_id`, `worker_id`, `rating`, `comment`, `created_at`, `reply`, `replied_at`) VALUES
+(1, 1, 11, 5, 'Professional painter with clean finishing, timely work, and reasonable pricing', '2026-04-25 21:17:10', NULL, NULL);
+
 -- --------------------------------------------------------
 
 --
@@ -277,6 +287,14 @@ CREATE TABLE `saved_workers` (
   `worker_id` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `saved_workers`
+--
+
+INSERT INTO `saved_workers` (`id`, `user_id`, `worker_id`, `created_at`) VALUES
+(1, 1, 11, '2026-04-25 21:13:55'),
+(2, 1, 1, '2026-04-25 21:14:40');
 
 -- --------------------------------------------------------
 
@@ -306,7 +324,9 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `location`, `created_at`
 (1, 'Alex', 'alex@gmail.com', '$2y$10$Pqk6xiBx7QGfQ.UCJ7/4UeP6.HWc0vt/2HeikVo2PbtGaC4LCkXUK', 'trivandrum', '2026-04-12 10:24:44', 'user', '1234567890', 'Life is easy when we find workers', 'user_1_1775990176.jpg', 'active'),
 (2, 'Rahul', 'rahul@gmail.com', '$2y$10$EuqN7ZtKZ0YFUZBMWdDTF.IP5QS0JP//ICkOpxph3s.qxVl3Wtkpm', 'Kochi', '2026-03-15 09:58:44', 'user', NULL, NULL, NULL, 'active'),
 (3, 'Anjali', 'anjali@gmail.com', '$2y$10$EuqN7ZtKZ0YFUZBMWdDTF.IP5QS0JP//ICkOpxph3s.qxVl3Wtkpm', 'Trivandrum', '2026-03-15 09:58:44', 'user', NULL, NULL, NULL, 'active'),
-(6, 'john', 'john@gmail.com', '$2y$10$uIBrfkNKETa8B4ITnL8bhebeeWJVt4cKj7xQZY8Bgw/PbvAD5T3ZS', 'trivandrum', '2026-04-25 06:57:29', 'user', '1234567890', '', '', 'active');
+(6, 'john', 'john@gmail.com', '$2y$10$uIBrfkNKETa8B4ITnL8bhebeeWJVt4cKj7xQZY8Bgw/PbvAD5T3ZS', 'trivandrum', '2026-04-25 06:57:29', 'user', '1234567890', '', '', 'active'),
+(7, 'Test User', 'testuser@example.com', '$2y$10$0gR4n/H58PEVZc/vWELcX.MnmsHkt4yM16ZECwHAMw.KfCUD9l8iy', 'Test City', '2026-04-25 20:23:54', 'user', '1234567890', '', '', 'active'),
+(8, 'Test User', 'test@example.com', '$2y$10$x6mFXL8XWneCf6lgNYM5r.U0VdRG/3UhjCcn8BLY5EEiJ/xUYjPfW', 'Test City', '2026-04-25 20:41:42', 'user', '1234567890', '', '', 'active');
 
 -- --------------------------------------------------------
 
@@ -410,8 +430,8 @@ INSERT INTO `workers` (`id`, `name`, `role`, `rating`, `price`, `reviews`, `avai
 (8, 'Shibu Joseph', 'Plumber', 4.1, 320, 100, 1, 'https://randomuser.me/api/portraits/men/81.jpg', '5 yrs', 210, 'Alappuzha', 'shibu@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
 (9, 'Manoj Pillai', 'Carpenter', 4.4, 480, 160, 1, 'https://randomuser.me/api/portraits/men/91.jpg', '8 yrs', 350, 'Kollam', 'manoj@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
 (10, 'Vinod Raj', 'Painter', 4.7, 330, 190, 1, 'https://randomuser.me/api/portraits/men/14.jpg', '13 yrs', 520, 'Thiruvananthapuram', 'vinod@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
-(11, 'Bob', 'Painter', 0, 0, 0, 1, 'user-image.jpg', '0 yrs', 0, 'trivandrum', 'bob@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', NULL, 'active', '2026-04-25 18:05:44', NULL, NULL),
-(12, 'hello', 'Cleaner', 0, 0, 0, 1, 'default.png', '0 yrs', 0, 'trivandrum', 'hello@gmail.com', '$2y$10$lF.K04yrWwDeRrB3Zh2z.ekM7LacLIecUWmvjxzIxrG8adv4eiXfG', '1234567890', 'active', '2026-04-25 18:05:44', NULL, NULL);
+(11, 'Bob', 'Painter', 5, 400, 1, 1, 'worker_11_1777147822.jpg', '2 yrs', 0, 'panachamoodu', 'bob@gmail.com', '$2y$10$aC6889dRTnEWpk1o1pfHiej7ACcQJF1gLcDFdxSr5P2qiJoG.Z23S', '1234567890', 'active', '2026-04-25 18:05:44', 'trivandrum', 'loyal worker'),
+(12, 'hello', 'Cleaner', 0, 0, 0, 1, 'default.png', '0 yrs', 0, 'trivandrum', 'hello@gmail.com', '$2y$10$lF.K04yrWwDeRrB3Zh2z.ekM7LacLIecUWmvjxzIxrG8adv4eiXfG', '1234567890', 'rejected', '2026-04-25 18:05:44', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -596,7 +616,7 @@ ALTER TABLE `admin_settings`
 -- AUTO_INCREMENT for table `bookings`
 --
 ALTER TABLE `bookings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `complaints`
@@ -620,7 +640,7 @@ ALTER TABLE `earnings`
 -- AUTO_INCREMENT for table `messages`
 --
 ALTER TABLE `messages`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `payments`
@@ -638,19 +658,19 @@ ALTER TABLE `requests`
 -- AUTO_INCREMENT for table `reviews`
 --
 ALTER TABLE `reviews`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `saved_workers`
 --
 ALTER TABLE `saved_workers`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `user_activity`
