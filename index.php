@@ -94,7 +94,9 @@
 
         /* top-line adjust */
         #features,
-        #categories {
+        #categories,
+        #help,
+        #contact {
             scroll-margin-top: 80px;
         }
 
@@ -605,6 +607,263 @@
             opacity: 0.95;
         }
 
+        /* ==================== HELP / FAQ SECTION ==================== */
+        .help-section {
+            padding: 80px 32px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+        }
+
+        .help-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .faq-list {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-top: 40px;
+        }
+
+        .faq-item {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .faq-item:hover {
+            border-color: var(--primary);
+        }
+
+        .faq-question {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            text-align: left;
+            gap: 16px;
+            transition: var(--transition);
+        }
+
+        .faq-question:hover {
+            color: var(--primary);
+        }
+
+        .faq-question svg {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            color: var(--text-gray);
+            transition: transform 0.3s ease;
+        }
+
+        .faq-item.open .faq-question svg {
+            transform: rotate(45deg);
+            color: var(--primary);
+        }
+
+        .faq-answer {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease, padding 0.35s ease;
+        }
+
+        .faq-item.open .faq-answer {
+            max-height: 200px;
+        }
+
+        .faq-answer p {
+            padding: 0 24px 20px 24px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* ==================== CONTACT SECTION ==================== */
+        .contact-section {
+            padding: 80px 32px;
+        }
+
+        .contact-container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 40px;
+            align-items: stretch;
+        }
+
+        .contact-form-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 36px;
+            box-shadow: 0 10px 40px var(--shadow);
+        }
+
+        .contact-form-card h3 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .contact-form-card > p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition);
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        .form-group textarea {
+            min-height: 110px;
+        }
+
+        .contact-submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .contact-submit-btn:hover {
+            background: linear-gradient(135deg, var(--primary-hover), var(--mint-500));
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--shadow-lg);
+        }
+
+        .contact-info {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            justify-content: space-between;
+        }
+
+        .contact-info-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            transition: var(--transition);
+        }
+
+        .contact-info-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 35px var(--shadow);
+        }
+
+        .contact-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .contact-icon.green {
+            background: linear-gradient(135deg, var(--mint-100), var(--mint-200));
+            color: var(--mint-600);
+        }
+
+        .contact-icon.teal {
+            background: linear-gradient(135deg, var(--teal-100), var(--teal-200));
+            color: var(--teal-600);
+        }
+
+        .contact-icon.yellow {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #b45309;
+        }
+
+        .contact-info-card h4 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .contact-info-card p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .contact-info-card a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .contact-info-card a:hover {
+            text-decoration: underline;
+        }
+
         /* ==================== CTA SECTION ==================== */
         .cta {
             padding: 80px 32px;
@@ -832,6 +1091,9 @@
             .cta h2 {
                 font-size: 26px;
             }
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 480px) {
@@ -886,8 +1148,8 @@
     <div class="nav-links">
         <a href="#features">Features</a>
         <a href="#categories">Categories</a>
-        <a href="#">Help</a>
-        <a href="#">Contact</a>
+        <a href="#help">Help</a>
+        <a href="#contact">Contact</a>
     </div>
     
     <div class="nav-right">
@@ -1129,6 +1391,167 @@
     </div>
 </section>
 
+<!-- Help / FAQ Section -->
+<section class="help-section" id="help">
+    <div class="help-container">
+        <div class="section-header">
+            <h2>How Can We Help?</h2>
+            <p>Find quick answers to the most commonly asked questions</p>
+        </div>
+
+        <div class="faq-list">
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    How do I hire a worker on HireX?
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <div class="faq-answer">
+                    <p>Simply create an account, search for the service you need, browse verified worker profiles, and book the one that fits your requirements. You can view ratings, reviews, and experience before making your choice.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    Are all workers verified?
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <div class="faq-answer">
+                    <p>Yes! Every worker on HireX undergoes a thorough background check and skill verification process before they can accept jobs on our platform. Your safety is our top priority.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    What if I'm not satisfied with the work?
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <div class="faq-answer">
+                    <p>We offer a satisfaction guarantee. If you're not happy with the service, contact our support team within 48 hours and we'll work to resolve the issue, including arranging a re-service or processing a refund.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    How do I register as a worker?
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <div class="faq-answer">
+                    <p>Click the "For Workers" link in the navigation bar to access the worker registration page. Fill in your details, upload your credentials, and our team will review your application within 24–48 hours.</p>
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">
+                    Is there a fee to use HireX?
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+                <div class="faq-answer">
+                    <p>Creating an account and browsing workers is completely free. You only pay for the services you book. Workers set their own rates, which are displayed transparently on their profiles.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Contact Section -->
+<section class="contact-section" id="contact">
+    <div class="contact-container">
+        <div class="section-header">
+            <h2>Get In Touch</h2>
+            <p>Have a question or feedback? We'd love to hear from you</p>
+        </div>
+
+        <div class="contact-grid">
+            <div class="contact-form-card">
+                <h3>Send us a Message</h3>
+                <p>Fill out the form and we'll get back to you within 24 hours.</p>
+                <form onsubmit="handleContactSubmit(event)">
+                    <div class="form-group">
+                        <label for="contact-name">Full Name</label>
+                        <input type="text" id="contact-name" placeholder="Your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-email">Email Address</label>
+                        <input type="email" id="contact-email" placeholder="you@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-subject">Subject</label>
+                        <input type="text" id="contact-subject" placeholder="How can we help?" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-message">Message</label>
+                        <textarea id="contact-message" placeholder="Tell us more..." required></textarea>
+                    </div>
+                    <button type="submit" class="contact-submit-btn">
+                        Send Message
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+
+            <div class="contact-info">
+                <div class="contact-info-card">
+                    <div class="contact-icon green">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4>Phone Support</h4>
+                        <p>Available Mon–Sat, 9 AM – 6 PM</p>
+                        <p><a href="tel:+911234567890">+91 123 456 7890</a></p>
+                    </div>
+                </div>
+
+                <div class="contact-info-card">
+                    <div class="contact-icon teal">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                            <polyline points="22,6 12,13 2,6"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4>Email Us</h4>
+                        <p>We usually reply within a few hours</p>
+                        <p><a href="mailto:support@hirex.com">support@hirex.com</a></p>
+                    </div>
+                </div>
+
+                <div class="contact-info-card">
+                    <div class="contact-icon yellow">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                            <circle cx="12" cy="10" r="3"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4>Visit Us</h4>
+                        <p>HireX Headquarters</p>
+                        <p>123 Tech Park, Kochi, Kerala 682001</p>
+                    </div>
+                </div>
+
+                <div class="contact-info-card">
+                    <div class="contact-icon green">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4>Business Hours</h4>
+                        <p>Monday – Saturday: 9:00 AM – 6:00 PM</p>
+                        <p>Sunday: Closed</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- CTA Section -->
 <section class="cta">
     <div class="cta-container">
@@ -1257,6 +1680,32 @@
             navbar.style.boxShadow = 'none';
         }
     });
+
+    // FAQ Accordion
+    function toggleFaq(btn) {
+        const item = btn.closest('.faq-item');
+        const wasOpen = item.classList.contains('open');
+        document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+        if (!wasOpen) item.classList.add('open');
+    }
+
+    // Contact form handler
+    function handleContactSubmit(e) {
+        e.preventDefault();
+        const btn = e.target.querySelector('.contact-submit-btn');
+        btn.textContent = 'Sending...';
+        btn.disabled = true;
+        setTimeout(() => {
+            btn.innerHTML = '✓ Message Sent!';
+            btn.style.background = 'linear-gradient(135deg, var(--mint-500), var(--teal-500))';
+            e.target.reset();
+            setTimeout(() => {
+                btn.innerHTML = 'Send Message <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+                btn.disabled = false;
+                btn.style.background = '';
+            }, 2500);
+        }, 1000);
+    }
 </script>
 
 </body>
