@@ -2,6 +2,8 @@
 
 A web-based platform for finding reliable contractors and skilled workers across cities.
 
+**Site Link:** https://hirex.infinityfree.me
+
 **Demo Link:**  [Watch the Hirex Demo on Youtube](https://youtu.be/FH4M3a2kN6A)
 
 ---
