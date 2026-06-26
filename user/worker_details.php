@@ -147,7 +147,7 @@ function stars($rating) {
         svg{display:block;}
 
         /* ── SIDEBAR ── */
-        .sidebar{width:var(--sidebar-width);height:100vh;background:var(--bg-secondary);padding:24px 16px;display:flex;flex-direction:column;position:fixed;border-right:1px solid var(--border);z-index:1000;transition:var(--transition);}
+        .sidebar{width:var(--sidebar-width);height:100vh;background:var(--bg-secondary);padding:24px 16px;display:flex;flex-direction:column;position:fixed;border-right:1px solid var(--border);z-index:1000;transition:var(--transition);overflow-y:auto;}
         .logo{font-family:'Plus Jakarta Sans',sans-serif;font-size:24px;font-weight:800;margin-bottom:32px;padding-left:14px;letter-spacing:-0.5px;color:var(--text-primary);}
         .logo .x{color:var(--primary);}
         .nav-group{margin-bottom:24px;}

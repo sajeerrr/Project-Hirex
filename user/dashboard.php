@@ -246,6 +246,7 @@ function getIcon($name, $size = 20, $class = '') {
             border-right: 1px solid var(--border);
             z-index: 1000;
             transition: var(--transition);
+            overflow-y: auto;
         }
 
         .logo {
@@ -1088,12 +1089,12 @@ function getIcon($name, $size = 20, $class = '') {
                 <span id="themeText">Dark</span>
             </button>
             
-            <button class="icon-btn" aria-label="Notifications" onclick="showToast('Notifications', 'You have 3 new messages', true)">
+            <button class="icon-btn" aria-label="Notifications" onclick="window.location='messages.php'">
                 <?php echo getIcon('bell', 18); ?>
                 <span class="notification-dot"></span>
             </button>
             
-            <div class="user-pill" aria-label="User Profile">
+            <div class="user-pill" aria-label="User Profile" onclick="window.location='profile.php'">
                 <div class="avatar">
                     <?php if ($userPhoto): ?>
                         <img src="<?php echo $userPhoto; ?>" alt="<?php echo $userName; ?>">

@@ -347,6 +347,7 @@ $workerCategories = [
             border-right: 1px solid var(--border);
             z-index: 1000;
             transition: var(--transition);
+            overflow-y: auto;
         }
 
         .logo {

@@ -17,6 +17,7 @@ $allowed = [
     'workers' => ['active', 'pending', 'approved', 'rejected', 'suspended'],
     'bookings' => ['pending', 'confirmed', 'completed', 'cancelled'],
     'contacts' => ['pending', 'open', 'resolved'],
+    'complaints' => ['pending', 'in_progress', 'resolved'],
     'admin' => ['active', 'inactive'],
 ];
 

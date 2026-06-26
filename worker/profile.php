@@ -100,7 +100,7 @@ include('../includes/worker-page-start.php');
     </div>
     <h3 style="font-size:18px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text-primary)"><?php echo wE($worker['name']??'');?></h3>
     <div style="background:var(--primary-light);color:var(--primary);padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;display:inline-block;margin:6px 0"><?php echo wE($worker['role']??'Worker');?></div>
-    <?php $loc=$worker['city']??$worker['location']??''; if($loc):?><div style="font-size:12px;color:var(--text-gray);margin-bottom:8px"><?php echo wGetIcon('location',13);?> <?php echo wE($loc);?></div><?php endif;?>
+    <?php $loc=$worker['city']??$worker['location']??''; if($loc):?><div style="font-size:12px;color:var(--text-gray);margin-bottom:8px"><?php echo wE($loc);?></div><?php endif;?>
     <div style="display:flex;justify-content:center;gap:4px;margin:8px 0">
         <?php for($s=1;$s<=5;$s++) echo '<span style="color:'.($s<=$avgRating?'#f59e0b':'var(--border)').'">★</span>';?>
         <span style="font-size:12px;color:var(--text-gray);margin-left:4px">(<?php echo number_format((float)$avgRating,1);?>)</span>

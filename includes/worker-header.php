@@ -40,7 +40,7 @@ $unread = (int)($conn->query("SELECT COUNT(*) as c FROM messages WHERE receiver_
             <span class="notification-dot"></span>
             <?php endif; ?>
         </button>
-        <div class="user-pill">
+        <div class="user-pill" onclick="window.location='profile.php'">
             <div class="avatar">
                 <?php if ($workerPhoto): ?>
                     <img src="<?php echo $workerPhoto; ?>" alt="<?php echo $workerName; ?>">

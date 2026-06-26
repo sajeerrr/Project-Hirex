@@ -1114,14 +1114,14 @@ function getStatusLabel($status) {
                 <span id="themeText">Dark</span>
             </button>
             
-            <button class="icon-btn" aria-label="Notifications" onclick="showToast('Notifications', 'You have <?php echo $pendingComplaints; ?> open complaints', true)">
+            <button class="icon-btn" aria-label="Notifications" onclick="window.location='complaints.php'">
                 <?php echo getIcon('bell', 18); ?>
                 <?php if ($pendingComplaints > 0): ?>
                     <span class="notification-dot"></span>
                 <?php endif; ?>
             </button>
             
-            <div class="user-pill" aria-label="Admin Profile">
+            <div class="user-pill" aria-label="Admin Profile" >
                 <div class="avatar">
                     <?php if ($adminPhoto): ?>
                         <img src="<?php echo $adminPhoto; ?>" alt="<?php echo $adminName; ?>">
