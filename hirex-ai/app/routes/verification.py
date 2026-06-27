@@ -3,6 +3,9 @@ from fastapi import UploadFile, File
 from typing import List
 from app.services.ocr import extract_text
 from app.services.image_quality import check_image_quality
+from app.services.face_match import verify_face
+from app.services.ocr_parser import parse_ocr_data
+from app.services.llm_parser import parse_document
 
 
 from app.utils.file_handler import (
@@ -39,11 +42,18 @@ async def verify_worker(
 
     ocr_result = extract_text(gov_path)
 
+    # print("\n".join(ocr_result))
+
+    # parsed_data = parse_ocr_data(ocr_result)
+    parsed_data = parse_document(ocr_result)
+
     # selfie_path = save_file(
     #     selfie,
     #     "selfies",
     #     ALLOWED_IMAGE_TYPES
     # )
+
+    # face_result = verify_face(gov_path, selfie_path)
 
     # certificate_path = None
 
@@ -69,7 +79,8 @@ async def verify_worker(
         "status": "success",
         "goverment_id": gov_path,
         "quality": quality,
-        "ocr":ocr_result
+        "ocr":parsed_data,
+        # "face":face_result
         # "selfie": selfie_path,
         # "certificate": certificate_path,
         # "portfolio": portfolio_paths
