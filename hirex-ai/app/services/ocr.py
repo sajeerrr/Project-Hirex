@@ -1,18 +1,14 @@
 from paddleocr import PaddleOCR
+from app.startup import AIModels
 
 # ocr = PaddleOCR(
-#     # use_angle_cls=True,
-#     lang="en"
+#     lang="en",
+#     device="cpu",
+#     enable_mkldnn=False
 # )
 
-ocr = PaddleOCR(
-    lang="en",
-    device="cpu",
-    enable_mkldnn=False
-)
-
 def extract_text(image_path: str):
-    result = ocr.predict(image_path)
+    result = AIModels.ocr.predict(image_path)
     extracted_text = []
     for page in result:
         if "rec_texts" in page:

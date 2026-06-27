@@ -4,15 +4,16 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from app.schemas.document import DocumentSchema
+from app.startup import AIModels
 
-load_dotenv()
+# load_dotenv()
 
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    api_key=os.getenv("GROQ_API_KEY")
-)
+# llm = ChatGroq(
+#     model="llama-3.3-70b-versatile",
+#     api_key=os.getenv("GROQ_API_KEY")
+# )
 
-structured_llm = llm.with_structured_output(DocumentSchema)
+# structured_llm = AIModels.llm.with_structured_output(DocumentSchema)
 
 PROMPT = """
 You are an expert in government identity documents.
@@ -38,25 +39,12 @@ OCR Text:
 
 prompt = ChatPromptTemplate.from_template(PROMPT)
 
-# def parse_document(ocr_text):
-#     chain = prompt | llm
-#     response = chain.invoke({
-#         "text":"\n".join(ocr_text)
-#     })
-
-#     try:
-#         return json.loads(response.content)
-#     except:
-#         return {
-#             "error":"Invalid JSON",
-#             "raw":response.content
-#         }
 
 def parse_document(ocr_text):
     formatted_prompt = prompt.invoke({
         "text": "\n".join(ocr_text)
     })
 
-    result = structured_llm.invoke(formatted_prompt)
+    result = AIModels.structured_llm.invoke(formatted_prompt)
 
     return result.model_dump()
