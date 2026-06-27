@@ -1,6 +1,10 @@
 from fastapi import APIRouter
 from fastapi import UploadFile, File
 from typing import List
+from app.services.ocr import extract_text
+from app.services.image_quality import check_image_quality
+
+
 from app.utils.file_handler import (
     save_file,
     ALLOWED_IMAGE_TYPES,
@@ -14,8 +18,8 @@ router = APIRouter()
 @router.post("/verify-worker")
 async def verify_worker(
     government_id: UploadFile = File(...),
-    selfie: UploadFile = File(...),
-    certificate: UploadFile | None = File(None),
+    # selfie: UploadFile = File(...),
+    # certificate: UploadFile | None = File(None),
     # portfolio: List[UploadFile] = File(...)
 ):
 
@@ -25,20 +29,30 @@ async def verify_worker(
         ALLOWED_DOCUMENT_TYPES
     )
 
-    selfie_path = save_file(
-        selfie,
-        "selfies",
-        ALLOWED_IMAGE_TYPES
-    )
+    quality = check_image_quality(gov_path)
 
-    certificate_path = None
+    if not quality["status"]:
+        return {
+            "status": "failed",
+            "reason": quality["reason"]
+        }
 
-    if certificate:
-        certificate_path = save_file(
-            certificate,
-            "certificates",
-            ALLOWED_DOCUMENT_TYPES
-        )
+    ocr_result = extract_text(gov_path)
+
+    # selfie_path = save_file(
+    #     selfie,
+    #     "selfies",
+    #     ALLOWED_IMAGE_TYPES
+    # )
+
+    # certificate_path = None
+
+    # if certificate:
+    #     certificate_path = save_file(
+    #         certificate,
+    #         "certificates",
+    #         ALLOWED_DOCUMENT_TYPES
+    #     )
     
     # portfolio_paths = []
 
@@ -54,7 +68,9 @@ async def verify_worker(
     return {
         "status": "success",
         "goverment_id": gov_path,
-        "selfie": selfie_path,
-        "certificate": certificate_path,
+        "quality": quality,
+        "ocr":ocr_result
+        # "selfie": selfie_path,
+        # "certificate": certificate_path,
         # "portfolio": portfolio_paths
     }
