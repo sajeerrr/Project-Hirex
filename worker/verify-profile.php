@@ -294,8 +294,14 @@ $pageTitle = "Profile Verification";
 $pageSubtitle = "Submit your identity documents for review.";
 $extraCSS = "
 .verify-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(280px,.65fr);gap:24px;align-items:start}
-.verify-upload{border:1px dashed var(--border);border-radius:12px;padding:16px;background:var(--bg-secondary)}
-.verify-upload input{margin-top:8px}
+.verify-upload{border:2px dotted var(--mint-400);border-radius:14px;padding:18px;background:var(--mint-50);transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+.verify-upload:hover{border-color:var(--mint-600);box-shadow:0 10px 24px rgba(34,197,94,.12);transform:translateY(-1px)}
+.verify-upload:focus-within{border-color:var(--mint-600);box-shadow:0 0 0 4px rgba(34,197,94,.12)}
+.verify-upload .form-label{color:var(--mint-600);font-weight:800}
+.verify-upload input[type='file']{width:100%;margin-top:9px;padding:8px;border:1px solid var(--mint-200);border-radius:10px;background:rgba(255,255,255,.82);color:var(--text-secondary);font-size:12px;cursor:pointer}
+.verify-upload input[type='file']::file-selector-button{margin-right:12px;padding:9px 15px;border:0;border-radius:8px;background:linear-gradient(135deg,var(--mint-500),var(--teal-500));color:#fff;font-family:inherit;font-size:12px;font-weight:800;cursor:pointer}
+[data-theme='dark'] .verify-upload{background:rgba(34,197,94,.10);border-color:var(--mint-400)}
+[data-theme='dark'] .verify-upload input[type='file']{background:rgba(13,20,17,.55);border-color:rgba(74,222,128,.3)}
 .verify-help{font-size:12px;color:var(--text-gray);margin-top:6px;line-height:1.5}
 .verify-status{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
 .verify-status:last-child{border-bottom:0}
