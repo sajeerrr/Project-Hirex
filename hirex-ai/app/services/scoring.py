@@ -8,7 +8,8 @@ def calculate_score(
     score = 0
 
     # OCR Success
-    if document.get("document_type") != "Unknown":
+    document_type = document.get("document_type")
+    if document_type and document_type != "Unknown":
         score += 40
 
     # Face Match
@@ -18,5 +19,12 @@ def calculate_score(
     # Certificate Bonus
     if certificate_uploaded:
         score += 20
+    
+    if not face["verified"]:
+        status = "resubmit"
+    elif score >= 80:
+        status = "pending_review"
+    else:
+        status = "resubmit"
 
     return score

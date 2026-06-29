@@ -14,8 +14,9 @@ def verify_worker(
     quality = check_image_quality(government_id)
     if not quality["status"]:
         return {
-            "status":"failed",
-            "reason":quality["reason"]
+            "success":"False",
+            "message":quality["reason"],
+            "data": None
         }
     
     ocr_result = extract_text(government_id)
@@ -31,10 +32,29 @@ def verify_worker(
         certificate is not None
     )
 
+    # return {
+    #     "status":"success",
+    #     "verification_score": score,
+    #     "document":document,
+    #     "face":face,
+    #     "quality":quality
+    # }
     return {
-        "status":"success",
-        "verification_score": score,
-        "document":document,
-        "face":face,
-        "quality":quality
+        "success": True,
+        "message": "Verification completed successfully.",
+        "data": {
+            "files": {
+                "government_id": government_id,
+                "selfie": selfie,
+                "certificate": certificate
+            },
+            "verification": {
+                "score": score,
+                "status": "pending",
+                "ocr_status": "success",
+                "face_verified": face["verified"],
+                "face_match_score": face["match_percentage"]
+            },
+            "document": document
+        }
     }

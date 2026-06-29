@@ -10,15 +10,35 @@ def verify_face(id_image, selfie_image):
             enforce_detection=True
         )
 
+        distance = round(result["distance"], 4)
+        threshold = result["threshold"]
+
+        # match_percentage = max(
+        #     0,
+        #     min(
+        #         100,
+        #         round((1 - (distance / threshold)) * 100, 2)
+        #     )
+        # )
+        match_percentage = max(
+            0,
+            round((1 - distance) * 100)
+        )
+
         return {
             "status": True,
             "verified": result["verified"],
-            "distance": round(result["distance"], 4),
-            "threshold": result["threshold"]
+            "distance": distance,
+            "threshold": threshold,
+            "match_percentage": match_percentage
         }
 
     except Exception as e:
         return {
             "status": False,
+            "verified": False,
+            "distance": None,
+            "threshold": None,
+            "match_percentage": 0,
             "message": str(e)
         }
