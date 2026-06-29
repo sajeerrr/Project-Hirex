@@ -96,8 +96,16 @@ $hasPaymentsTable = tableExists($conn, 'payments');
 $hasRequestsTable = tableExists($conn, 'requests');
 $hasAdminLogsTable = tableExists($conn, 'admin_logs');
 $hasUserActivityTable = tableExists($conn, 'user_activity');
+$hasWorkerVerificationsTable = tableExists($conn, 'worker_verifications');
 $workersHaveStatus = columnExists($conn, 'workers', 'status');
 $workersHaveCreatedAt = columnExists($conn, 'workers', 'created_at');
+
+$pendingVerifications = $hasWorkerVerificationsTable
+    ? (int) scalarQuery(
+        $conn,
+        "SELECT COUNT(*) FROM worker_verifications WHERE status='pending'"
+    )
+    : 0;
 
 // Get pending support/complaint count for notification badge.
 if ($hasComplaintsTable) {
@@ -456,6 +464,22 @@ function getStatusLabel($status) {
         }
 
         .nav-item svg { width: 18px; height: 18px; }
+
+        .nav-count {
+            margin-left: auto;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 6px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #fef3c7;
+            color: #b45309;
+            font-size: 10px;
+            font-weight: 800;
+            line-height: 1;
+        }
 
         .signout-container {
             margin-top: auto;
@@ -1049,6 +1073,14 @@ function getStatusLabel($status) {
 
         <div class="nav-group">
             <div class="nav-label">Moderation</div>
+            <a href="verifications.php" class="nav-item">
+                <?php echo getIcon('shield', 18); ?> Verifications
+                <?php if ($pendingVerifications > 0): ?>
+                    <span class="nav-count" aria-label="<?php echo (int) $pendingVerifications; ?> pending verifications">
+                        <?php echo $pendingVerifications > 99 ? '99+' : (int) $pendingVerifications; ?>
+                    </span>
+                <?php endif; ?>
+            </a>
             <a href="reviews.php" class="nav-item">
                 <?php echo getIcon('star', 18); ?> Reviews
             </a>

@@ -20,11 +20,4 @@ def calculate_score(
     if certificate_uploaded:
         score += 20
     
-    if not face["verified"]:
-        status = "resubmit"
-    elif score >= 80:
-        status = "pending_review"
-    else:
-        status = "resubmit"
-
     return score

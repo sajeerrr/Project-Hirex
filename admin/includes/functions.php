@@ -117,6 +117,7 @@ function admin_page_start($title, $active, $subtitle = '') {
             ['bookings.php',    'bookings',     'Bookings',       'calendar'],
         ],
         'Moderation' => [
+            ['verifications.php','verifications','Verifications',  'shield'],
             ['reviews.php',     'reviews',      'Reviews',        'star'],
             ['complaints.php',  'complaints',   'Complaints',     'alert'],
         ],

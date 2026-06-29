@@ -262,10 +262,28 @@ if (!$message && $verification) {
         $message = "Your profile verification has been approved.";
         $messageType = "success";
     } elseif ($status === "rejected") {
-        $message = $verification["admin_remark"]
-            ? "Verification rejected: " . $verification["admin_remark"]
-            : "Your verification was rejected. You may submit new documents.";
-        $messageType = "error";
+        $remark = trim((string) ($verification["admin_remark"] ?? ""));
+        $isResubmission = stripos(
+            $remark,
+            "Resubmission requested:"
+        ) === 0;
+
+        if ($isResubmission) {
+            $instructions = trim(substr(
+                $remark,
+                strlen("Resubmission requested:")
+            ));
+            $message = "Admin requested new documents";
+            if ($instructions !== "") {
+                $message .= ": " . $instructions;
+            }
+            $messageType = "warning";
+        } else {
+            $message = $remark !== ""
+                ? "Verification rejected: " . $remark
+                : "Your verification was rejected. You may submit new documents.";
+            $messageType = "error";
+        }
     } else {
         $message = "You have already submitted your documents.";
         $messageType = "warning";

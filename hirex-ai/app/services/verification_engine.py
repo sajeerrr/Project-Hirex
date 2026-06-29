@@ -14,7 +14,7 @@ def verify_worker(
     quality = check_image_quality(government_id)
     if not quality["status"]:
         return {
-            "success":"False",
+            "success":False,
             "message":quality["reason"],
             "data": None
         }

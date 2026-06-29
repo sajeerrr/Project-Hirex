@@ -19,7 +19,7 @@ $navItems = [
         ['profile.php',   'My Profile',  'user'],
         ['bookings.php',  'My Bookings', 'calendar'],
         ['messages.php',  'Messages',    'message', $unreadMsgs],
-        ['verify-profile.php', 'Profile Verify', 'verify']
+        ['verify-profile.php', 'Profile Verify', 'shield']
     ],
     'Work' => [
         ['job_requests.php', 'Job Requests',  'briefcase', $pendingJobs],
