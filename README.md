@@ -6,6 +6,7 @@ A web-based platform for finding reliable contractors and skilled workers across
 
 **Demo Link:**  [Watch the Hirex Demo on Youtube](https://youtu.be/FH4M3a2kN6A)
 
+**Hirex-AI Link:**  [Watch the Hirex Demo on Youtube](https://youtu.be/bFwtgBgoU_g)
 ---
 
 ## Overview
