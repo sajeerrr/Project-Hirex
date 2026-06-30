@@ -13,6 +13,19 @@ $worker = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 if (!$worker) { session_destroy(); header('Location: ../login.php'); exit; }
 
+$verification = null;
+$verificationStmt = $conn->prepare("
+    SELECT status, admin_remark, submitted_at, verified_at
+    FROM worker_verifications
+    WHERE worker_id = ?
+    ORDER BY id DESC
+    LIMIT 1
+");
+$verificationStmt->bind_param('i', $worker_id);
+$verificationStmt->execute();
+$verification = $verificationStmt->get_result()->fetch_assoc();
+$verificationStmt->close();
+
 // Handle availability toggle
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_avail'])) {
     $av = (int)$_POST['toggle_avail'];
@@ -67,6 +80,53 @@ $pageTitle    = 'Dashboard';
 $pageSubtitle = 'Welcome back, ' . wE($worker['name']) . '! Here\'s your overview.';
 include('../includes/worker-page-start.php');
 ?>
+
+<?php
+$verificationStatus = $verification['status'] ?? 'not_submitted';
+$verificationRemark = trim((string) ($verification['admin_remark'] ?? ''));
+$isResubmission = $verificationStatus === 'rejected' &&
+    stripos($verificationRemark, 'Resubmission requested:') === 0;
+
+if ($verificationStatus === 'approved') {
+    $verificationTitle = 'Profile verified';
+    $verificationText = 'Your identity verification has been approved.';
+    $verificationColor = 'var(--mint-600)';
+    $verificationBackground = 'rgba(34,197,94,.10)';
+} elseif ($isResubmission) {
+    $verificationTitle = 'New documents requested';
+    $verificationText = trim(substr(
+        $verificationRemark,
+        strlen('Resubmission requested:')
+    )) ?: 'Please review the request and upload new documents.';
+    $verificationColor = '#b45309';
+    $verificationBackground = 'rgba(245,158,11,.12)';
+} elseif ($verificationStatus === 'rejected') {
+    $verificationTitle = 'Verification rejected';
+    $verificationText = $verificationRemark ?: 'Open verification to submit new documents.';
+    $verificationColor = 'var(--danger)';
+    $verificationBackground = 'rgba(239,68,68,.10)';
+} elseif (in_array($verificationStatus, ['pending', 'processing'], true)) {
+    $verificationTitle = 'Verification under review';
+    $verificationText = 'Your documents were submitted and are waiting for an administrator.';
+    $verificationColor = '#b45309';
+    $verificationBackground = 'rgba(245,158,11,.12)';
+} else {
+    $verificationTitle = 'Verify your profile';
+    $verificationText = 'Submit your identity documents to earn the verified badge.';
+    $verificationColor = 'var(--primary)';
+    $verificationBackground = 'var(--primary-light)';
+}
+?>
+<a href="verify-profile.php" style="display:flex;align-items:center;gap:14px;padding:16px 18px;margin-bottom:20px;border-radius:12px;text-decoration:none;background:<?php echo $verificationBackground; ?>;color:<?php echo $verificationColor; ?>;border:1px solid currentColor">
+    <span style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--bg-secondary);flex-shrink:0">
+        <?php echo wGetIcon($verificationStatus === 'approved' ? 'check' : 'shield', 21); ?>
+    </span>
+    <span style="min-width:0">
+        <strong style="display:block;font-size:14px"><?php echo wE($verificationTitle); ?></strong>
+        <span style="display:block;font-size:12px;line-height:1.5;margin-top:2px;color:var(--text-secondary)"><?php echo wE($verificationText); ?></span>
+    </span>
+    <span style="margin-left:auto;font-weight:800">→</span>
+</a>
 
 <!-- STATS BAR -->
 <div class="stats-grid">

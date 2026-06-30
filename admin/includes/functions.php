@@ -117,6 +117,7 @@ function admin_page_start($title, $active, $subtitle = '') {
             ['bookings.php',    'bookings',     'Bookings',       'calendar'],
         ],
         'Moderation' => [
+            ['verifications.php','verifications','Verifications',  'shield'],
             ['reviews.php',     'reviews',      'Reviews',        'star'],
             ['complaints.php',  'complaints',   'Complaints',     'alert'],
         ],
@@ -692,7 +693,7 @@ function admin_page_start($title, $active, $subtitle = '') {
                 <span id="adminThemeIcon"><?php echo admin_icon('moon', 16); ?></span>
                 <span id="adminThemeText">Dark</span>
             </button>
-            <div class="user-pill">
+            <div class="user-pill" onclick="window.location='admin.php'">
                 <div class="avatar"><?php echo e($initial); ?></div>
                 <div>
                     <div class="user-name"><?php echo $name; ?></div>
