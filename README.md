@@ -239,3 +239,4 @@ The PHP frontend and the FastAPI AI backend are deployed independently, allowing
 ## Summary
 
 HireX modernizes urban service hiring by combining a user-facing web platform with a production-style AI verification backend. The system reduces the burden of manual document review while keeping human administrators in control of every final decision — making it both practical and trustworthy for real-world deployment.
+
